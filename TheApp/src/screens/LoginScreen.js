@@ -44,7 +44,7 @@ const LoginScreen = () => {
     axios
       .post('http://localhost:8000/login', user)
       .then(response => {
-        console.log(response);
+        // console.log(response);  // for debugging purposes
         const token = response.data.token;
         const userId = response.data.userId;
         AsyncStorage.setItem('authToken', token);

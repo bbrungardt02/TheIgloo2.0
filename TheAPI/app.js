@@ -42,14 +42,23 @@ function authenticateJWT(req, res, next) {
   if (authHeader) {
     const token = authHeader.split(" ")[1];
 
-    jwt.verify(token, process.env.JWT_SECRET_KEY, (err, user) => {
-      if (err) {
-        return res.sendStatus(403);
-      }
-
-      req.user = user;
-      next();
-    });
+    return new Promise((resolve, reject) => {
+      jwt.verify(token, process.env.JWT_SECRET_KEY, (err, user) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(user);
+        }
+      });
+    })
+      .then((user) => {
+        req.user = user;
+        next();
+      })
+      .catch((err) => {
+        console.log(err);
+        res.sendStatus(403);
+      });
   } else {
     res.sendStatus(401);
   }
@@ -174,3 +183,188 @@ app.get("/users/:userId", authenticateJWT, async (req, res) => {
       res.status(500).json({ message: "Failed to get users!" });
     });
 });
+
+// endpoint to send a request to a user
+
+app.post("/friend-request", authenticateJWT, async (req, res) => {
+  const { currentUserId, selectedUserId } = req.body;
+
+  try {
+    // update the recipient's friendRequests array
+    await User.findByIdAndUpdate(
+      selectedUserId,
+      {
+        $push: {
+          friendRequests: currentUserId,
+        },
+      },
+      { new: true }
+    );
+    // update the sender's sentFriendRequests array
+    await User.findByIdAndUpdate(
+      currentUserId,
+      {
+        $push: {
+          sentFriendRequests: selectedUserId,
+        },
+      },
+      { new: true }
+    );
+
+    res.status(200).json({ message: "Request sent successfully!" });
+  } catch (err) {
+    console.log("Error sending request: ", err);
+    res.status(500).json({ message: "Failed to send request!" });
+  }
+});
+
+// endpoint to show all the friend requests of a particular user
+
+app.get("/friend-requests/:userId", authenticateJWT, async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // fetch the user document based on the UserId
+    const user = await User.findById(userId)
+      .populate("friendRequests", "name email image")
+      .lean();
+
+    const friendRequests = user.friendRequests;
+    res.json(friendRequests);
+  } catch (error) {
+    console.log("Error getting friend requests: ", error);
+    res.status(500).json({ message: "Failed to get friend requests!" });
+  }
+});
+
+// endpoint to accept a friend request
+
+app.post("/friend-request/accept", authenticateJWT, async (req, res) => {
+  try {
+    const { senderId, recipientId } = req.body;
+
+    // retrieve the documents of sender and the recipient
+    const sender = await User.findById(senderId);
+    const recipient = await User.findById(recipientId);
+
+    // update the friends list for both users
+    sender.friends.push(recipientId);
+    recipient.friends.push(senderId);
+
+    recipient.friendRequests = recipient.friendRequests.filter(
+      (request) => request.toString() !== senderId.toString()
+    );
+
+    sender.sentFriendRequests = sender.sentFriendRequests.filter(
+      (request) => request.toString() !== recipientId.toString()
+    );
+
+    await sender.save();
+    await recipient.save();
+
+    res.status(200).json({ message: "Friend request accepted successfully!" });
+  } catch (error) {
+    console.log("Error accepting friend request: ", error);
+    res.status(500).json({ message: "Failed to accept request!" });
+  }
+});
+
+// endpoint to reject a friend request
+
+// endpoint to access all the friends of the logged in user
+
+app.get("/friends/:userId", authenticateJWT, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId)
+      .populate("friends", "name email image")
+      .lean();
+
+    const friends = user.friends;
+    res.json(friends);
+  } catch (error) {
+    console.log("Error getting friends: ", error);
+    res.status(500).json({ message: "Failed to get friends!" });
+  }
+});
+
+// Configure multer for handling file uploads
+
+const multer = require("multer");
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "files/"); // Specify the desired destination folder
+  },
+  filename: function (req, file, cb) {
+    // Generate a unique filename for the uploaded file
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + "-" + file.originalname);
+  },
+});
+const upload = multer({ storage: storage });
+
+// endpoint to post messages and store it in the backend
+
+app.post(
+  "/messages",
+  authenticateJWT,
+  upload.single("imageFile"),
+  async (req, res) => {
+    try {
+      const { senderId, receiverId, messageType, messageText } = req.body;
+
+      const newMessage = new Message({
+        senderId,
+        receiverId,
+        messageType,
+        messageText,
+        timestamp: new Date(),
+        imageUrl: messageType === "image",
+      });
+
+      res.status(200).json({ message: "Message sent successfully!" });
+    } catch (error) {
+      console.log("Error sending message: ", error);
+      res.status(500).json({ message: "Failed to send message!" });
+    }
+  }
+);
+
+// endpoint to get the user details to design the chat room header
+
+app.get("/user/:userId", authenticateJWT, async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // fetch the user data from the user ID
+    const recipientId = await User.findById(userId);
+    res.json(recipientId);
+  } catch (error) {
+    console.log("Error getting user details: ", error);
+    res.status(500).json({ message: "Failed to get user details!" });
+  }
+});
+
+// endpoint to fetch the messages between two users in the chat room
+app.get(
+  "/messages/:senderId/:recipientId",
+  authenticateJWT,
+  async (req, res) => {
+    try {
+      const { senderId, recipientId } = req.params;
+
+      // fetch the messages between the sender and the receiver
+      const messages = await Message.find({
+        $or: [
+          { senderId: senderId, recipientId: recipientId },
+          { senderId: recipientId, recipientId: senderId },
+        ],
+      }).populate("senderId", "_id name");
+
+      res.json(messages);
+    } catch (error) {
+      console.log("Error getting messages: ", error);
+      res.status(500).json({ message: "Failed to get messages!" });
+    }
+  }
+);

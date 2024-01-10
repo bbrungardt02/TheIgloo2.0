@@ -1,3 +1,4 @@
+import {SERVER_ADDRESS} from '@env';
 import {StyleSheet, Text, View, Pressable, Image} from 'react-native';
 import React, {useContext} from 'react';
 import {UserType} from '../../UserContext';
@@ -10,7 +11,7 @@ const User = ({item}) => {
     try {
       const token = await AsyncStorage.getItem('authToken');
 
-      const response = await fetch('http://localhost:8000/friend-request', {
+      const response = await fetch(`${SERVER_ADDRESS}/friend-request`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

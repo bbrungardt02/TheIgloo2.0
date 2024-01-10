@@ -1,3 +1,4 @@
+import {SERVER_ADDRESS} from '@env';
 import {StyleSheet, Text, View, ScrollView, Pressable} from 'react-native';
 import React, {useContext, useEffect, useLayoutEffect} from 'react';
 import {UserType} from '../../UserContext';
@@ -32,7 +33,7 @@ const ChatsScreen = () => {
       try {
         const token = await AsyncStorage.getItem('authToken');
         const response = await fetch(
-          `http://localhost:8000/conversations/${userId}`,
+          `${SERVER_ADDRESS}/conversations/${userId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,

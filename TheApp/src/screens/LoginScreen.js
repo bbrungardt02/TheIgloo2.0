@@ -1,3 +1,4 @@
+import {SERVER_ADDRESS} from '@env';
 import {
   KeyboardAvoidingView,
   Pressable,
@@ -42,7 +43,7 @@ const LoginScreen = () => {
     };
 
     axios
-      .post('http://localhost:8000/login', user)
+      .post(`${SERVER_ADDRESS}/login`, user)
       .then(response => {
         // console.log(response);  // for debugging purposes
         const token = response.data.token;

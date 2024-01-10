@@ -1,3 +1,4 @@
+import {SERVER_ADDRESS} from '@env';
 import {StyleSheet, Text, View} from 'react-native';
 import React, {useLayoutEffect, useContext, useEffect} from 'react';
 import {useNavigation} from '@react-navigation/native';
@@ -45,7 +46,7 @@ const HomeScreen = () => {
       setUserId(userId);
 
       axios
-        .get(`http://localhost:8000/users/${userId}`, {
+        .get(`${SERVER_ADDRESS}/users/${userId}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },

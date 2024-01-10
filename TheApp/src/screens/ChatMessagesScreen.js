@@ -1,3 +1,4 @@
+import {SERVER_ADDRESS} from '@env';
 import {
   StyleSheet,
   Text,
@@ -37,7 +38,7 @@ const ChatMessagesScreen = () => {
   };
 
   useEffect(() => {
-    const socket = io('http://localhost:8000');
+    const socket = io(`${SERVER_ADDRESS}`);
 
     socket.on('chat message', msg => {
       console.log('Received message from server', msg); // Log the received message
@@ -52,7 +53,7 @@ const ChatMessagesScreen = () => {
   const fetchMessages = async conversationId => {
     const token = await AsyncStorage.getItem('authToken');
     const response = await fetch(
-      `http://localhost:8000/messages/${conversationId}`,
+      `${SERVER_ADDRESS}/messages/${conversationId}`,
       {
         headers: {
           Authorization: `Bearer ${token}`, // replace with your JWT token
@@ -76,14 +77,11 @@ const ChatMessagesScreen = () => {
     const fetchRecipientData = async () => {
       try {
         const token = await AsyncStorage.getItem('authToken');
-        const response = await fetch(
-          `http://localhost:8000/user/${recipientId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+        const response = await fetch(`${SERVER_ADDRESS}/user/${recipientId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
           },
-        );
+        });
         const data = await response.json();
         setRecipientData(data);
       } catch (error) {
@@ -117,7 +115,7 @@ const ChatMessagesScreen = () => {
       }
 
       const token = await AsyncStorage.getItem('authToken');
-      const response = await fetch('http://localhost:8000/messages', {
+      const response = await fetch(`${SERVER_ADDRESS}/messages`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -126,7 +124,7 @@ const ChatMessagesScreen = () => {
       });
 
       if (response.ok) {
-        const socket = io('http://localhost:8000');
+        const socket = io(`${SERVER_ADDRESS}`);
         socket.emit('chat message', {
           text: message,
           userId: userId,

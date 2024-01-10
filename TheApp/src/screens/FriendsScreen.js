@@ -1,3 +1,4 @@
+import {SERVER_ADDRESS} from '@env';
 import {StyleSheet, Text, View} from 'react-native';
 import React, {useEffect, useContext} from 'react';
 import {UserType} from '../../UserContext';
@@ -17,7 +18,7 @@ const FriendsScreen = () => {
     try {
       const token = await AsyncStorage.getItem('authToken');
       const response = await axios.get(
-        `http://localhost:8000/friend-requests/${userId}`,
+        `${SERVER_ADDRESS}/friend-requests/${userId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

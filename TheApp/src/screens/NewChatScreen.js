@@ -1,3 +1,4 @@
+import {SERVER_ADDRESS} from '@env';
 import {StyleSheet, Text, View, Button, TextInput} from 'react-native';
 import React, {useState, useEffect} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -13,7 +14,7 @@ const NewChatScreen = () => {
       const senderId = await AsyncStorage.getItem('userId');
       console.log('SenderId:', senderId); // Add this line
       console.log('RecipientId:', recipientId); // Add this line
-      const response = await fetch('http://localhost:8000/conversation', {
+      const response = await fetch(`${SERVER_ADDRESS}/conversation`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -43,14 +44,11 @@ const NewChatScreen = () => {
       try {
         const token = await AsyncStorage.getItem('authToken');
         const userId = await AsyncStorage.getItem('userId');
-        const response = await fetch(
-          `http://localhost:8000/friends/${userId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+        const response = await fetch(`${SERVER_ADDRESS}/friends/${userId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
           },
-        );
+        });
         const data = await response.json();
 
         if (response.ok) {

@@ -1,3 +1,4 @@
+import {SERVER_ADDRESS} from '@env';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -35,7 +36,7 @@ const RegisterScreen = () => {
     };
     // send a POST request to the backend API to register the user
     try {
-      const response = await axios.post('http://localhost:8000/register', user);
+      const response = await axios.post(`${SERVER_ADDRESS}/register`, user);
       console.log(response);
       Alert.alert('Success', 'You have successfully registered!');
       setName('');

@@ -1,3 +1,4 @@
+import {SERVER_ADDRESS} from '@env';
 import {StyleSheet, Text, View, Pressable, Image} from 'react-native';
 import React, {useContext} from 'react';
 import {UserType} from '../../UserContext';
@@ -10,20 +11,17 @@ const FriendRequests = ({item, friendRequests, setFriendRequests}) => {
   const acceptRequest = async friendRequestId => {
     try {
       const token = await AsyncStorage.getItem('authToken');
-      const response = await fetch(
-        'http://localhost:8000/friend-request/accept',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            senderId: friendRequestId,
-            recipientId: userId,
-          }),
+      const response = await fetch(`${SERVER_ADDRESS}/friend-request/accept`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
-      );
+        body: JSON.stringify({
+          senderId: friendRequestId,
+          recipientId: userId,
+        }),
+      });
       if (response.ok) {
         setFriendRequests(
           friendRequests.filter(response => response._id !== friendRequestId),

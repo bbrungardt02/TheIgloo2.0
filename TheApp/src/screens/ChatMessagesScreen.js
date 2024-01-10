@@ -52,14 +52,12 @@ const ChatMessagesScreen = () => {
 
   const fetchMessages = async conversationId => {
     const token = await AsyncStorage.getItem('authToken');
-    const response = await fetch(
-      `${SERVER_ADDRESS}/messages/${conversationId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`, // replace with your JWT token
-        },
+    const URL = `${SERVER_ADDRESS}/messages/${conversationId}`;
+    const response = await fetch(URL, {
+      headers: {
+        Authorization: `Bearer ${token}`, // replace with your JWT token
       },
-    );
+    });
 
     if (!response.ok) {
       throw new Error('Error fetching messages');
@@ -77,7 +75,8 @@ const ChatMessagesScreen = () => {
     const fetchRecipientData = async () => {
       try {
         const token = await AsyncStorage.getItem('authToken');
-        const response = await fetch(`${SERVER_ADDRESS}/user/${recipientId}`, {
+        const URL2 = `${SERVER_ADDRESS}/user/${recipientId}`;
+        const response = await fetch(URL2, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -115,7 +114,8 @@ const ChatMessagesScreen = () => {
       }
 
       const token = await AsyncStorage.getItem('authToken');
-      const response = await fetch(`${SERVER_ADDRESS}/messages`, {
+      const URL3 = `${SERVER_ADDRESS}/messages`;
+      const response = await fetch(URL3, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

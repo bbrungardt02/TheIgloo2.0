@@ -71,6 +71,15 @@ function authenticateJWT(req, res, next) {
   }
 }
 
+// endpoint to access all the users for testing purposes
+app.get("/users", async (req, res) => {
+  User.find() // find all the users
+    .catch((err) => {
+      console.log("Error getting users: ", err);
+      res.status(500).json({ message: "Failed to get users!" });
+    });
+});
+
 // endpoint for registering a new user
 app.post("/register", async (req, res) => {
   const { name, email, password, image } = req.body;

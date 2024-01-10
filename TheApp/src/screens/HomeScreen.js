@@ -44,9 +44,9 @@ const HomeScreen = () => {
       const token = await AsyncStorage.getItem('authToken');
       const userId = await AsyncStorage.getItem('userId');
       setUserId(userId);
-
+      const URL = `${SERVER_ADDRESS}/users/${userId}`;
       axios
-        .get(`${SERVER_ADDRESS}/users/${userId}`, {
+        .get(URL, {
           headers: {
             Authorization: `Bearer ${token}`,
           },

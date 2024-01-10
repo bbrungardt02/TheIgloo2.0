@@ -18,32 +18,33 @@ const LoginScreen = () => {
   const [password, setPassword] = React.useState('');
   const navigation = useNavigation();
 
-  useEffect(() => {
-    const checkLoginStatus = async () => {
-      try {
-        const token = await AsyncStorage.getItem('authToken');
+  // useEffect(() => {
+  //   const checkLoginStatus = async () => {
+  //     try {
+  //       const token = await AsyncStorage.getItem('authToken');
 
-        if (token) {
-          navigation.replace('Home');
-        } else {
-          // token not found , show the login screen itself
-        }
-      } catch (error) {
-        console.log('error', error);
-      }
-    };
+  //       if (token) {
+  //         navigation.replace('Home');
+  //       } else {
+  //         // token not found , show the login screen itself
+  //       }
+  //     } catch (error) {
+  //       console.log('error', error);
+  //     }
+  //   };
 
-    checkLoginStatus();
-  }, []);
+  //   checkLoginStatus();
+  // }, []);
 
   const handleLogin = () => {
     const user = {
       email: email,
       password: password,
     };
-
+    const URL = `${SERVER_ADDRESS}/login`;
+    console.log('SERVER URL', URL);
     axios
-      .post(`${SERVER_ADDRESS}/login`, user)
+      .post(URL, user)
       .then(response => {
         // console.log(response);  // for debugging purposes
         const token = response.data.token;

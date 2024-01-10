@@ -14,7 +14,8 @@ const NewChatScreen = () => {
       const senderId = await AsyncStorage.getItem('userId');
       console.log('SenderId:', senderId); // Add this line
       console.log('RecipientId:', recipientId); // Add this line
-      const response = await fetch(`${SERVER_ADDRESS}/conversation`, {
+      const URL = `${SERVER_ADDRESS}/conversation`;
+      const response = await fetch(URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -44,7 +45,8 @@ const NewChatScreen = () => {
       try {
         const token = await AsyncStorage.getItem('authToken');
         const userId = await AsyncStorage.getItem('userId');
-        const response = await fetch(`${SERVER_ADDRESS}/friends/${userId}`, {
+        const URL2 = `${SERVER_ADDRESS}/friends/${userId}`;
+        const response = await fetch(URL2, {
           headers: {
             Authorization: `Bearer ${token}`,
           },

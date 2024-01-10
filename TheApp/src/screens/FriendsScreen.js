@@ -17,14 +17,12 @@ const FriendsScreen = () => {
   const fetchFriendRequests = async () => {
     try {
       const token = await AsyncStorage.getItem('authToken');
-      const response = await axios.get(
-        `${SERVER_ADDRESS}/friend-requests/${userId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+      const URL = `${SERVER_ADDRESS}/friend-requests/${userId}`;
+      const response = await axios.get(URL, {
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
-      );
+      });
       if (response.status === 200) {
         const friendRequestsData = response.data.map(friendRequest => ({
           _id: friendRequest._id,

@@ -36,7 +36,8 @@ const RegisterScreen = () => {
     };
     // send a POST request to the backend API to register the user
     try {
-      const response = await axios.post(`${SERVER_ADDRESS}/register`, user);
+      const URL = `${SERVER_ADDRESS}/register`;
+      const response = await axios.post(URL, user);
       console.log(response);
       Alert.alert('Success', 'You have successfully registered!');
       setName('');

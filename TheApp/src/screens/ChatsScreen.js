@@ -32,14 +32,12 @@ const ChatsScreen = () => {
     const conversationsList = async () => {
       try {
         const token = await AsyncStorage.getItem('authToken');
-        const response = await fetch(
-          `${SERVER_ADDRESS}/conversations/${userId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+        const URL = `${SERVER_ADDRESS}/conversations/${userId}`;
+        const response = await fetch(URL, {
+          headers: {
+            Authorization: `Bearer ${token}`,
           },
-        );
+        });
         const data = await response.json();
 
         if (response.ok) {

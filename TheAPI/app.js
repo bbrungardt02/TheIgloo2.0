@@ -8,8 +8,8 @@ if (!process.env.JWT_SECRET_KEY || !process.env.MONGOURI || !process.env.PORT) {
 
 const express = require("express");
 const http = require("http");
-const socketIo = require("socket.io");
 const mongoose = require("mongoose");
+const socketIo = require("socket.io");
 
 const bodyParser = require("body-parser");
 const passport = require("passport");
@@ -23,11 +23,8 @@ mongoose
   .catch((err) => console.error("Connection error", err));
 
 const app = express();
-const httpServer = http.createServer(app);
-const io = socketIo(httpServer, {
-  // options...
-});
-
+const server = http.createServer(app);
+const io = socketIo(server);
 const cors = require("cors");
 
 app.use(cors());
@@ -35,6 +32,16 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(passport.initialize());
 const jwt = require("jsonwebtoken");
+
+const port = process.env.PORT || 8000;
+server.listen(port, () => console.log(`Listening on port ${port}`));
+
+const User = require("./models/User");
+const Message = require("./models/Message");
+const Conversation = require("./models/Conversation");
+
+const bcrypt = require("bcrypt");
+const saltRounds = 10;
 
 function authenticateJWT(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -63,40 +70,6 @@ function authenticateJWT(req, res, next) {
     res.sendStatus(401);
   }
 }
-
-// io.on("connection", (socket) => {
-//   console.log("a user connected");
-
-//   socket.on("message", async (msg) => {
-//     console.log("message: " + msg.content);
-
-//     // Create a new message document
-//     const message = new Message(msg);
-
-//     // Save the message to the database
-//     try {
-//       await message.save();
-//       // Emit the message to the receiver
-//       socket.broadcast.to(msg.receiver).emit("message", msg);
-//     } catch (err) {
-//       console.error("Failed to save message: ", err);
-//     }
-//   });
-
-//   socket.on("disconnect", () => {
-//     console.log("user disconnected");
-//     // Update the user's online status in the database
-//     // Add error handling here
-//   });
-// });
-
-const port = process.env.PORT || 8000;
-httpServer.listen(port, () => console.log(`Server is running on port ${port}`));
-
-const User = require("./models/User");
-const Message = require("./models/Message");
-const bcrypt = require("bcrypt");
-const saltRounds = 10;
 
 // endpoint for registering a new user
 app.post("/register", async (req, res) => {
@@ -129,7 +102,7 @@ const createToken = (userId) => {
 
   // generate the token with a secret key and expiration time
   const token = jwt.sign(payload, process.env.JWT_SECRET_KEY, {
-    expiresIn: "1h",
+    expiresIn: "7d",
   });
   return token;
 };
@@ -169,8 +142,8 @@ app.post("/login", async (req, res) => {
     });
 });
 
-// endpoint to access all the users except the logged in user
-
+// endpoint to access all the users except the logged in user and current friends
+// REMEMBER TO CHANGE TO AND CURRENT FRIENDS
 app.get("/users/:userId", authenticateJWT, async (req, res) => {
   const loggedInUserId = req.params.userId;
 
@@ -218,7 +191,7 @@ app.post("/friend-request", authenticateJWT, async (req, res) => {
   }
 });
 
-// endpoint to show all the friend requests of a particular user
+// endpoint to show all the friend requests received of a particular user
 
 app.get("/friend-requests/:userId", authenticateJWT, async (req, res) => {
   try {
@@ -234,6 +207,25 @@ app.get("/friend-requests/:userId", authenticateJWT, async (req, res) => {
   } catch (error) {
     console.log("Error getting friend requests: ", error);
     res.status(500).json({ message: "Failed to get friend requests!" });
+  }
+});
+
+// endpoint to show all the friend requests sent of a particular user
+
+app.get("/sent-friend-requests/:userId", authenticateJWT, async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // fetch the user document based on the UserId
+    const user = await User.findById(userId)
+      .populate("sentFriendRequests", "name email image")
+      .lean();
+
+    const sentFriendRequests = user.sentFriendRequests;
+    res.json(sentFriendRequests);
+  } catch (error) {
+    console.log("Error getting sent friend requests: ", error);
+    res.status(500).json({ message: "Failed to get sent friend requests!" });
   }
 });
 
@@ -288,39 +280,148 @@ app.get("/friends/:userId", authenticateJWT, async (req, res) => {
   }
 });
 
+// endpoint to create a new chat room in the conversation collection
+
+app.post("/conversation", authenticateJWT, async (req, res) => {
+  try {
+    const { senderId, recipientId } = req.body;
+
+    // check if a conversation already exists between the sender and the recipient
+    const conversation = await Conversation.findOne({
+      participants: [senderId, recipientId],
+    });
+
+    if (conversation) {
+      return res.status(200).json({ conversation });
+    }
+
+    // create a new conversation
+    const newConversation = new Conversation({
+      participants: [senderId, recipientId],
+    });
+
+    await newConversation.save();
+    res.status(200).json({ conversation: newConversation });
+  } catch (error) {
+    console.log("Error creating conversation: ", error);
+    res.status(500).json({ message: "Failed to create conversation!" });
+  }
+});
+
+// endpoint to get all the conversations of a particular user
+
+app.get("/conversations/:userId", authenticateJWT, async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // fetch the conversations of the user
+    const conversations = await Conversation.find({
+      participants: userId,
+    })
+      .populate("participants", "name email image")
+      .populate("messages", "text timestamp")
+      .lean();
+
+    res.json(conversations);
+  } catch (error) {
+    console.log("Error getting conversations: ", error);
+    res.status(500).json({ message: "Failed to get conversations!" });
+  }
+});
+
 // Configure multer for handling file uploads
 
+const path = require("path");
 const multer = require("multer");
+const mime = require("mime-types");
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "files/"); // Specify the desired destination folder
+    cb(null, "public");
   },
   filename: function (req, file, cb) {
-    // Generate a unique filename for the uploaded file
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + "-" + file.originalname);
+    const name = req.params.id;
+    cb(null, name + (path.extname(file.originalname) || ".png"));
   },
 });
-const upload = multer({ storage: storage });
 
-// endpoint to post messages and store it in the backend
+const upload = multer({ storage });
+
+function getRandomString(length = 20) {
+  const randomChars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let result = "";
+  for (let i = 0; i < length; i++)
+    result += randomChars.charAt(
+      Math.floor(Math.random() * randomChars.length)
+    );
+  return result;
+}
+
+// endpoint to post messages and store it in the backend per conversation while keeping in mind socket.io
 
 app.post(
   "/messages",
   authenticateJWT,
-  upload.single("imageFile"),
+  upload.fields([
+    { name: "imageFile", maxCount: 1 },
+    { name: "videoFile", maxCount: 1 },
+    { name: "audioFile", maxCount: 1 },
+  ]),
   async (req, res) => {
     try {
-      const { senderId, receiverId, messageType, messageText } = req.body;
-
-      const newMessage = new Message({
+      const {
         senderId,
-        receiverId,
+        recipientId,
         messageType,
         messageText,
+        conversationId,
+      } = req.body;
+
+      let images = [];
+      let videos = [];
+      let audios = [];
+
+      if (messageType === "image") {
+        if (!req.files.imageFile) {
+          return res.status(400).json({ message: "No image file uploaded" });
+        }
+        images.push(req.files.imageFile[0].path);
+      }
+
+      if (messageType === "video") {
+        if (!req.files.videoFile) {
+          return res.status(400).json({ message: "No video file uploaded" });
+        }
+        videos.push(req.files.videoFile[0].path);
+      }
+
+      if (messageType === "audio") {
+        if (!req.files.audioFile) {
+          return res.status(400).json({ message: "No audio file uploaded" });
+        }
+        audios.push(req.files.audioFile[0].path);
+      }
+
+      const newMessage = new Message({
+        conversationId,
+        userId: senderId,
+        text: messageText,
         timestamp: new Date(),
-        imageUrl: messageType === "image",
+        images,
+        videos,
+        audios,
+        read: false,
       });
+
+      await newMessage.save();
+
+      await Conversation.findByIdAndUpdate(conversationId, {
+        $push: { messages: newMessage._id },
+        lastMessage: newMessage._id,
+      });
+
+      io.to(conversationId).emit("chat", newMessage);
 
       res.status(200).json({ message: "Message sent successfully!" });
     } catch (error) {
@@ -345,26 +446,122 @@ app.get("/user/:userId", authenticateJWT, async (req, res) => {
   }
 });
 
-// endpoint to fetch the messages between two users in the chat room
-app.get(
-  "/messages/:senderId/:recipientId",
-  authenticateJWT,
-  async (req, res) => {
-    try {
-      const { senderId, recipientId } = req.params;
+// endpoint to fetch the messages of the conversation
 
-      // fetch the messages between the sender and the receiver
-      const messages = await Message.find({
-        $or: [
-          { senderId: senderId, recipientId: recipientId },
-          { senderId: recipientId, recipientId: senderId },
-        ],
-      }).populate("senderId", "_id name");
+app.get("/messages/:conversationId", authenticateJWT, async (req, res) => {
+  try {
+    // fetch the messages of the conversation
+    const messages = await Message.find({
+      conversationId: req.params.conversationId,
+    }).populate("userId", "_id name");
 
-      res.json(messages);
-    } catch (error) {
-      console.log("Error getting messages: ", error);
-      res.status(500).json({ message: "Failed to get messages!" });
-    }
+    res.json(messages);
+  } catch (error) {
+    console.log("Error getting messages: ", error);
+    res
+      .status(500)
+      .json({ message: `Failed to get messages! Error: ${error.message}` });
   }
-);
+});
+
+// Socket.io code for real-time chat
+
+const { Server } = require("socket.io");
+
+module.exports = function (server) {
+  const io = new Server(server);
+  const users = {};
+
+  io.on("connection", (socket) => {
+    console.log("a user connected");
+
+    const conversationId = socket.handshake.query.conversationId;
+    const userId = socket.handshake.query.userId;
+    if (conversationId) socket.join(conversationId);
+    if (userId) {
+      socket.join(userId);
+      if (!users[userId]) {
+        users[userId] = { id: userId, count: 1 };
+      } else {
+        users[userId].count++;
+      }
+      socket.emit("userOnline", userId);
+    }
+
+    socket.on("disconnect", () => {
+      console.log("user disconnected");
+      if (users[userId]) {
+        users[userId].count--;
+        if (users[userId].count === 0) {
+          delete users[userId];
+        }
+      }
+    });
+
+    // Save the message to the database
+    async function saveMessage(messageData) {
+      const message = new Message(messageData.message);
+      await message.save();
+      return message;
+    }
+
+    // Update the conversation with the new message
+    async function updateConversation(messageData, message) {
+      await Conversation.findByIdAndUpdate(messageData.conversationId, {
+        $push: { messages: message._id },
+        lastMessage: message._id,
+      });
+    }
+
+    socket.on("chat", async (messageData) => {
+      try {
+        const message = await saveMessage(messageData);
+        await updateConversation(messageData, message);
+
+        // Emit the chat event to the conversation room
+        socket.broadcast.to(conversationId).emit("chat", messageData);
+      } catch (error) {
+        console.error(error);
+        socket.emit("error", {
+          message: "An error occurred while sending the message.",
+        });
+      }
+    });
+
+    socket.on("createChat", async (data) => {
+      // Create a new conversation in the database
+      const conversation = new Conversation({
+        participants: data.users.map((u) => u._id),
+      });
+      await conversation.save();
+
+      // Emit the newChat event to the recipient users
+      const recipients = data.users.filter((x) => x._id !== userId);
+      recipients.forEach((r) => io.to(r._id).emit("newChat", data));
+    });
+
+    socket.on("isRecipientOnline", (recipientId) => {
+      io.to(userId).emit(
+        "isRecipientOnline",
+        !!Object.values(users).find((id) => id === recipientId)
+      );
+    });
+
+    socket.on("offline", (userId) => {
+      io.emit("userOffline", userId);
+    });
+
+    socket.on("online", (userId) => {
+      io.emit("userOnline", userId);
+    });
+
+    socket.on("userTyping", (status) => {
+      socket.broadcast.to(conversationId).emit("userTyping", status);
+    });
+
+    socket.on("disconnect", () => {
+      console.log("user disconnected");
+      delete users[socket.id];
+    });
+  });
+};

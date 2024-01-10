@@ -1,21 +1,38 @@
 import {StyleSheet, Text, View, ScrollView, Pressable} from 'react-native';
-import React, {useContext, useEffect} from 'react';
+import React, {useContext, useEffect, useLayoutEffect} from 'react';
 import {UserType} from '../../UserContext';
 import {useNavigation} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import UserChat from '../components/UserChat';
-
+import Icon from 'react-native-vector-icons/Ionicons';
+// change the chatsScreen to show the conversations that the user has instead of the friends list
 const ChatsScreen = () => {
-  const [friends, setFriends] = React.useState([]);
+  const [conversations, setConversations] = React.useState([]);
   const {userId, setUserId} = useContext(UserType);
   const navigation = useNavigation();
 
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <Icon
+          name="add-circle-outline"
+          size={30}
+          color="#000"
+          style={{marginRight: 10}}
+          onPress={() => {
+            navigation.navigate('NewChat');
+          }}
+        />
+      ),
+    });
+  }, [navigation]);
+
   useEffect(() => {
-    const friendsList = async () => {
+    const conversationsList = async () => {
       try {
         const token = await AsyncStorage.getItem('authToken');
         const response = await fetch(
-          `http://localhost:8000/friends/${userId}`,
+          `http://localhost:8000/conversations/${userId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -25,23 +42,28 @@ const ChatsScreen = () => {
         const data = await response.json();
 
         if (response.ok) {
-          setFriends(data);
+          setConversations(data);
         }
       } catch (error) {
         console.log('error fetching friends list', error);
       }
     };
-    friendsList();
+    conversationsList();
   }, []);
 
-  console.log('friends', friends); // for debugging purposes
+  // console.log('friends', friends); // for debugging purposes
   return (
     <ScrollView showsVerticalScrollIndicator={false}>
-      <Pressable>
-        {friends.map((item, index) => (
-          <UserChat key={index} item={item} />
-        ))}
-      </Pressable>
+      {conversations.map((item, index) => (
+        <Pressable
+          key={index}
+          onPress={() => {
+            console.log('Conversation ID:', item._id);
+            console.log('Users in conversation:', item.users);
+          }}>
+          <UserChat item={item} />
+        </Pressable>
+      ))}
     </ScrollView>
   );
 };

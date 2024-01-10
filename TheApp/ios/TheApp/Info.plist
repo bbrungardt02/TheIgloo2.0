@@ -33,8 +33,14 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Your app requires access to the camera for capturing photos.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string></string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Your app requires access to the microphone for capturing videos with sound.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Your app requires access to the photo library for selecting photos and videos.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>fonts/FontAwesome.ttf</string>

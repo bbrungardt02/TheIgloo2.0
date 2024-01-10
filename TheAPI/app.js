@@ -73,7 +73,11 @@ function authenticateJWT(req, res, next) {
 
 // endpoint to access all the users for testing purposes
 app.get("/users", async (req, res) => {
-  User.find() // find all the users
+  User.find()
+    .select("name") // find all the users and select only the 'name' field
+    .then((users) => {
+      res.json(users);
+    })
     .catch((err) => {
       console.log("Error getting users: ", err);
       res.status(500).json({ message: "Failed to get users!" });

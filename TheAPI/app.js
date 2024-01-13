@@ -71,6 +71,153 @@ function authenticateJWT(req, res, next) {
   }
 }
 
+// Socket.io code for real-time chat
+
+const users = {};
+
+io.on("connection", (socket) => {
+  console.log("a user connected");
+
+  const userId = socket.handshake.query.userId;
+  if (userId) {
+    socket.join(userId);
+    if (!users[userId]) {
+      users[userId] = { id: userId, count: 1 };
+    } else {
+      users[userId].count++;
+    }
+    socket.emit("userOnline", userId);
+  }
+
+  socket.on("joinConversation", (conversationId) => {
+    if (conversationId) {
+      // Check if the socket is already in the room
+      const rooms = Object.keys(socket.rooms);
+      if (rooms.includes(conversationId)) {
+        console.log(
+          `Socket is already in conversation with ID: ${conversationId}`
+        );
+        return;
+      }
+
+      socket.join(conversationId, (error) => {
+        if (error) {
+          console.error(
+            `Failed to join conversation with ID: ${conversationId}. Error: ${error}`
+          );
+        } else {
+          console.log(`Socket joined conversation with ID: ${conversationId}`);
+        }
+      });
+    } else {
+      console.error("No conversationId provided for joinConversation event");
+    }
+  });
+
+  socket.on("message", async (message) => {
+    try {
+      const { conversationId, userId, text } = message;
+
+      let images = [];
+      let videos = [];
+      let audios = [];
+
+      const newMessage = new Message({
+        conversationId: conversationId,
+        userId: userId,
+        text: text,
+        timestamp: new Date(),
+        images,
+        videos,
+        audios,
+        read: false,
+      });
+
+      await newMessage.save();
+
+      await Conversation.findByIdAndUpdate(conversationId, {
+        $push: { messages: newMessage._id },
+        lastMessage: newMessage._id,
+      });
+
+      // Populate the userId field of the newMessage document with only the name and _id fields
+      await newMessage.populate({
+        path: "userId",
+        model: "User",
+        select: "name _id", // Only include the name and _id fields
+      });
+
+      io.to(conversationId).emit("message", newMessage);
+
+      console.log("message", newMessage);
+      console.log("conversationId", conversationId);
+    } catch (error) {
+      console.log("Error sending message: ", error);
+    }
+  });
+
+  socket.on("createChat", (data) => {
+    // Emit the newChat event to the conversation room
+    io.to(data.conversationId).emit("newChat", data);
+  });
+
+  socket.on("isRecipientOnline", (recipientId) => {
+    io.to(userId).emit("isRecipientOnline", !!users[recipientId]);
+  });
+
+  socket.on("offline", (userId) => {
+    if (users[userId]) {
+      users[userId].count--;
+      if (users[userId].count === 0) {
+        delete users[userId];
+      }
+    }
+    io.emit("userOffline", userId);
+  });
+
+  socket.on("online", (userId) => {
+    if (!users[userId]) {
+      users[userId] = { id: userId, count: 1 };
+    } else {
+      users[userId].count++;
+    }
+    io.emit("userOnline", userId);
+  });
+
+  socket.on("userTyping", (status) => {
+    socket.broadcast.to(conversationId).emit("userTyping", status);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("user disconnected");
+    if (users[userId]) {
+      users[userId].count--;
+      if (users[userId].count === 0) {
+        delete users[userId];
+      }
+    }
+  });
+});
+
+// endpoint to delete all messages in conversation
+
+app.delete("/messages/:conversationId", authenticateJWT, async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const conversation = await Conversation.findById(conversationId);
+
+    if (!conversation) {
+      return res.status(404).json({ message: "Conversation not found" });
+    }
+
+    await Message.deleteMany({ conversationId: conversationId });
+    res.status(200).json({ message: "Messages deleted successfully!" });
+  } catch (error) {
+    console.log("Error deleting messages: ", error);
+    res.status(500).json({ message: "Failed to delete messages!" });
+  }
+});
+
 // endpoint to access all the users for testing purposes
 app.get("/users", async (req, res) => {
   User.find()
@@ -297,22 +444,14 @@ app.get("/friends/:userId", authenticateJWT, async (req, res) => {
 
 app.post("/conversation", authenticateJWT, async (req, res) => {
   try {
-    const { senderId, recipientId } = req.body;
+    const { senderId, recipientIds } = req.body; // recipientIds should be an array
 
-    // check if a conversation already exists between the sender and the recipient
-    const conversation = await Conversation.findOne({
-      participants: [senderId, recipientId],
-    });
-
-    if (conversation) {
-      return res.status(200).json({ conversation });
-    }
-
-    // create a new conversation
+    // create a new conversation with all participants
     const newConversation = new Conversation({
-      participants: [senderId, recipientId],
+      participants: [senderId, ...recipientIds],
     });
 
+    io.emit("new conversation", { conversationId: newConversation._id });
     await newConversation.save();
     res.status(200).json({ conversation: newConversation });
   } catch (error) {
@@ -339,6 +478,21 @@ app.get("/conversations/:userId", authenticateJWT, async (req, res) => {
   } catch (error) {
     console.log("Error getting conversations: ", error);
     res.status(500).json({ message: "Failed to get conversations!" });
+  }
+});
+
+// endpoint to get the user details to design the chat room header
+
+app.get("/user/:userId", authenticateJWT, async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // fetch the user data from the user ID
+    const recipientId = await User.findById(userId);
+    res.json(recipientId);
+  } catch (error) {
+    console.log("Error getting user details: ", error);
+    res.status(500).json({ message: "Failed to get user details!" });
   }
 });
 
@@ -371,104 +525,27 @@ function getRandomString(length = 20) {
   return result;
 }
 
-// endpoint to post messages and store it in the backend per conversation while keeping in mind socket.io
-
-app.post(
-  "/messages",
-  authenticateJWT,
-  upload.fields([
-    { name: "imageFile", maxCount: 1 },
-    { name: "videoFile", maxCount: 1 },
-    { name: "audioFile", maxCount: 1 },
-  ]),
-  async (req, res) => {
-    try {
-      const {
-        senderId,
-        recipientId,
-        messageType,
-        messageText,
-        conversationId,
-      } = req.body;
-
-      let images = [];
-      let videos = [];
-      let audios = [];
-
-      if (messageType === "image") {
-        if (!req.files.imageFile) {
-          return res.status(400).json({ message: "No image file uploaded" });
-        }
-        images.push(req.files.imageFile[0].path);
-      }
-
-      if (messageType === "video") {
-        if (!req.files.videoFile) {
-          return res.status(400).json({ message: "No video file uploaded" });
-        }
-        videos.push(req.files.videoFile[0].path);
-      }
-
-      if (messageType === "audio") {
-        if (!req.files.audioFile) {
-          return res.status(400).json({ message: "No audio file uploaded" });
-        }
-        audios.push(req.files.audioFile[0].path);
-      }
-
-      const newMessage = new Message({
-        conversationId,
-        userId: senderId,
-        text: messageText,
-        timestamp: new Date(),
-        images,
-        videos,
-        audios,
-        read: false,
-      });
-
-      await newMessage.save();
-
-      await Conversation.findByIdAndUpdate(conversationId, {
-        $push: { messages: newMessage._id },
-        lastMessage: newMessage._id,
-      });
-
-      io.to(conversationId).emit("chat", newMessage);
-
-      res.status(200).json({ message: "Message sent successfully!" });
-    } catch (error) {
-      console.log("Error sending message: ", error);
-      res.status(500).json({ message: "Failed to send message!" });
-    }
-  }
-);
-
-// endpoint to get the user details to design the chat room header
-
-app.get("/user/:userId", authenticateJWT, async (req, res) => {
-  try {
-    const { userId } = req.params;
-
-    // fetch the user data from the user ID
-    const recipientId = await User.findById(userId);
-    res.json(recipientId);
-  } catch (error) {
-    console.log("Error getting user details: ", error);
-    res.status(500).json({ message: "Failed to get user details!" });
-  }
-});
-
 // endpoint to fetch the messages of the conversation
 
 app.get("/messages/:conversationId", authenticateJWT, async (req, res) => {
   try {
-    // fetch the messages of the conversation
-    const messages = await Message.find({
-      conversationId: req.params.conversationId,
-    }).populate("userId", "_id name");
+    // fetch the conversation and populate the messages
+    const conversation = await Conversation.findById(
+      req.params.conversationId
+    ).populate({
+      path: "messages",
+      populate: {
+        path: "userId",
+        model: "User",
+        select: "name _id", // Only include the name and _id fields
+      },
+    });
 
-    res.json(messages);
+    if (!conversation) {
+      return res.status(404).json({ message: "Conversation not found" });
+    }
+
+    res.json(conversation.messages);
   } catch (error) {
     console.log("Error getting messages: ", error);
     res
@@ -476,105 +553,3 @@ app.get("/messages/:conversationId", authenticateJWT, async (req, res) => {
       .json({ message: `Failed to get messages! Error: ${error.message}` });
   }
 });
-
-// Socket.io code for real-time chat
-
-const { Server } = require("socket.io");
-
-module.exports = function (server) {
-  const io = new Server(server);
-  const users = {};
-
-  io.on("connection", (socket) => {
-    console.log("a user connected");
-
-    const conversationId = socket.handshake.query.conversationId;
-    const userId = socket.handshake.query.userId;
-    if (conversationId) socket.join(conversationId);
-    if (userId) {
-      socket.join(userId);
-      if (!users[userId]) {
-        users[userId] = { id: userId, count: 1 };
-      } else {
-        users[userId].count++;
-      }
-      socket.emit("userOnline", userId);
-    }
-
-    socket.on("disconnect", () => {
-      console.log("user disconnected");
-      if (users[userId]) {
-        users[userId].count--;
-        if (users[userId].count === 0) {
-          delete users[userId];
-        }
-      }
-    });
-
-    // Save the message to the database
-    async function saveMessage(messageData) {
-      const message = new Message(messageData.message);
-      await message.save();
-      return message;
-    }
-
-    // Update the conversation with the new message
-    async function updateConversation(messageData, message) {
-      await Conversation.findByIdAndUpdate(messageData.conversationId, {
-        $push: { messages: message._id },
-        lastMessage: message._id,
-      });
-    }
-
-    socket.on("chat", async (messageData) => {
-      try {
-        const message = await saveMessage(messageData);
-        await updateConversation(messageData, message);
-
-        // Emit the chat event to the conversation room
-        socket.broadcast.to(conversationId).emit("chat", messageData);
-      } catch (error) {
-        console.error(error);
-        socket.emit("error", {
-          message: "An error occurred while sending the message.",
-        });
-      }
-    });
-
-    socket.on("createChat", async (data) => {
-      // Create a new conversation in the database
-      const conversation = new Conversation({
-        participants: data.users.map((u) => u._id),
-      });
-      await conversation.save();
-
-      // Emit the newChat event to the recipient users
-      const recipients = data.users.filter((x) => x._id !== userId);
-      recipients.forEach((r) => io.to(r._id).emit("newChat", data));
-    });
-
-    socket.on("isRecipientOnline", (recipientId) => {
-      io.to(userId).emit(
-        "isRecipientOnline",
-        !!Object.values(users).find((id) => id === recipientId)
-      );
-    });
-
-    socket.on("offline", (userId) => {
-      io.emit("userOffline", userId);
-    });
-
-    socket.on("online", (userId) => {
-      io.emit("userOnline", userId);
-    });
-
-    socket.on("userTyping", (status) => {
-      socket.broadcast.to(conversationId).emit("userTyping", status);
-    });
-
-    socket.on("disconnect", () => {
-      console.log("user disconnected");
-      delete users[socket.id];
-    });
-  });
-};

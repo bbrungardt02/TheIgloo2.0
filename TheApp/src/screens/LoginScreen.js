@@ -12,37 +12,43 @@ import {TextInput, GestureHandlerRootView} from 'react-native-gesture-handler';
 import {useNavigation} from '@react-navigation/native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {connectSocket} from '../components/Socket';
 
 const LoginScreen = () => {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const navigation = useNavigation();
 
-  // useEffect(() => {
-  //   const checkLoginStatus = async () => {
-  //     try {
-  //       const token = await AsyncStorage.getItem('authToken');
+  useEffect(() => {
+    const checkLoginStatus = async () => {
+      try {
+        const token = await AsyncStorage.getItem('authToken');
+        const userId = await AsyncStorage.getItem('userId');
 
-  //       if (token) {
-  //         navigation.replace('Home');
-  //       } else {
-  //         // token not found , show the login screen itself
-  //       }
-  //     } catch (error) {
-  //       console.log('error', error);
-  //     }
-  //   };
+        if (token && userId) {
+          // Connect to the socket and set the user online
+          connectSocket(userId);
 
-  //   checkLoginStatus();
-  // }, []);
+          navigation.replace('Home');
+        } else {
+          // token not found , show the login screen itself
+        }
+      } catch (error) {
+        console.log('error', error);
+      }
+    };
+
+    checkLoginStatus();
+  }, []);
 
   const handleLogin = () => {
     const user = {
       email: email,
       password: password,
     };
+    // console.log(`server address, ${SERVER_ADDRESS}`); // for debugging EC2 instance network connection ( had to access to the address inside p list for iOS)
     const URL = `${SERVER_ADDRESS}/login`;
-    console.log('SERVER URL', URL);
+    // console.log('SERVER URL', URL); // same thing here
     axios
       .post(URL, user)
       .then(response => {
@@ -51,6 +57,9 @@ const LoginScreen = () => {
         const userId = response.data.userId;
         AsyncStorage.setItem('authToken', token);
         AsyncStorage.setItem('userId', userId.toString());
+
+        // Connect to the socket and set the user online
+        connectSocket(userId);
 
         navigation.replace('Home');
       })

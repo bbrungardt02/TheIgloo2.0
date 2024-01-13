@@ -6,7 +6,7 @@ import {useNavigation} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import UserChat from '../components/UserChat';
 import Icon from 'react-native-vector-icons/Ionicons';
-// change the chatsScreen to show the conversations that the user has instead of the friends list
+
 const ChatsScreen = () => {
   const [conversations, setConversations] = React.useState([]);
   const {userId, setUserId} = useContext(UserType);

@@ -16,7 +16,7 @@ const UserChat = ({item}) => {
   const firstOtherParticipant = otherParticipants[0];
 
   const lastMessage = item.messages[item.messages.length - 1];
-
+  // console.log('last message', lastMessage);
   return (
     <Pressable
       onPress={() =>

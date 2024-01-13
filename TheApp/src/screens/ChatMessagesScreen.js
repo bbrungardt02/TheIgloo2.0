@@ -9,7 +9,7 @@ import {
   Pressable,
   Image,
 } from 'react-native';
-import React, {useContext, useEffect, useLayoutEffect} from 'react';
+import React, {useContext, useEffect, useLayoutEffect, useRef} from 'react';
 import {UserType} from '../../UserContext';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
@@ -19,8 +19,13 @@ import EmojiSelector from 'react-native-emoji-selector';
 import {useRoute} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useNavigation} from '@react-navigation/native';
-import io from 'socket.io-client';
 import * as ImagePicker from 'react-native-image-picker';
+import {
+  joinConversation,
+  sendMessage,
+  onMessageReceived,
+  leaveConversation,
+} from '../components/Socket';
 
 const ChatMessagesScreen = () => {
   const {userId} = useContext(UserType);
@@ -31,31 +36,49 @@ const ChatMessagesScreen = () => {
   const [selectedImage, setSelectedImage] = React.useState('');
   const navigation = useNavigation();
   const [recipientData, setRecipientData] = React.useState();
+  const isJoined = React.useRef(false);
 
   const [showEmojiSelector, setShowEmojiSelector] = React.useState(false);
   const handleEmojiPress = () => {
     setShowEmojiSelector(!showEmojiSelector);
   };
 
+  const scrollViewRef = useRef(null);
+
   useEffect(() => {
-    const socket = io(`${SERVER_ADDRESS}`);
-
-    socket.on('chat message', msg => {
-      console.log('Received message from server', msg); // Log the received message
-      // Update the state with the new message
-      setMessages(prevMessages => [...prevMessages, msg]);
-    });
-
-    // Clean up the effect
-    return () => socket.disconnect();
+    scrollToBottom();
   }, []);
+
+  const scrollToBottom = () => {
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollToEnd({animated: false});
+    }
+  };
+
+  const handleContentSizeChange = () => {
+    scrollToBottom();
+  };
+
+  useEffect(() => {
+    if (!isJoined.current) {
+      // Access the current value of the ref
+      joinConversation(conversationId);
+      isJoined.current = true; // Update the ref
+    }
+
+    // Clean up the effect when the component unmounts
+    return () => {
+      leaveConversation(conversationId);
+      isJoined.current = false; // Reset the ref
+    };
+  }, [conversationId]); // Remove isJoined from the dependency array
 
   const fetchMessages = async conversationId => {
     const token = await AsyncStorage.getItem('authToken');
     const URL = `${SERVER_ADDRESS}/messages/${conversationId}`;
     const response = await fetch(URL, {
       headers: {
-        Authorization: `Bearer ${token}`, // replace with your JWT token
+        Authorization: `Bearer ${token}`,
       },
     });
 
@@ -64,11 +87,18 @@ const ChatMessagesScreen = () => {
     }
 
     const messages = await response.json();
+
     setMessages(messages);
   };
 
   useEffect(() => {
     fetchMessages(conversationId);
+  }, []);
+
+  useEffect(() => {
+    onMessageReceived(message => {
+      setMessages(prevMessages => [...prevMessages, message]);
+    });
   }, []);
 
   useEffect(() => {
@@ -92,51 +122,24 @@ const ChatMessagesScreen = () => {
   }, []);
 
   const handleSend = async () => {
+    // If message is an empty string, return immediately
+    if (!message.trim()) {
+      return;
+    }
+
     try {
-      const formData = new FormData();
-      formData.append('senderId', userId);
-      formData.append('conversationId', conversationId);
-
-      // if there's a selected image in state, send it
-      if (selectedImage) {
-        console.log('Sending image...', selectedImage); // Log when an image is being sent
-        formData.append('messageType', 'image');
-        formData.append('imageFile', {
-          uri: selectedImage,
-          name: 'image.jpg',
-          type: 'image/jpeg',
-        });
-      } else {
-        // Otherwise, it's a text message
-        console.log('Sending text message...', message); // Log when a text message is being sent
-        formData.append('messageType', 'text');
-        formData.append('messageText', message);
-      }
-
-      const token = await AsyncStorage.getItem('authToken');
-      const URL3 = `${SERVER_ADDRESS}/messages`;
-      const response = await fetch(URL3, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
+      const newMessage = {
+        conversationId: conversationId,
+        userId: {
+          _id: userId,
         },
-        body: formData,
-      });
+        text: message,
+        timestamp: new Date().toISOString(),
+      };
 
-      if (response.ok) {
-        const socket = io(`${SERVER_ADDRESS}`);
-        socket.emit('chat message', {
-          text: message,
-          userId: userId,
-          conversationId: conversationId,
-        });
-
-        // Pass conversationId to fetchMessages
-        fetchMessages(conversationId).then(() => {
-          setMessage('');
-          setSelectedImage('');
-        });
-      }
+      sendMessage(newMessage);
+      // Clear the message input
+      setMessage('');
     } catch (error) {
       console.log('error sending message', error);
     }
@@ -201,10 +204,36 @@ const ChatMessagesScreen = () => {
     });
   }, [recipientData]);
 
-  // console.log('messages', messages); // for debugging purposes
+  // deletes all messages in the conversation for both users, used to clean database up for testing
+
+  const deleteMessages = async () => {
+    const token = await AsyncStorage.getItem('authToken');
+    const URL = `${SERVER_ADDRESS}/messages/${conversationId}`;
+    const response = await fetch(URL, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Error deleting messages');
+    }
+
+    const result = await response.json();
+    console.log(result.message);
+    setMessages([]);
+  };
+
   return (
     <KeyboardAvoidingView style={{flex: 1, backgroundColor: '#f0f0f0'}}>
-      <ScrollView>
+      <ScrollView
+        ref={scrollViewRef}
+        contentContainerStyle={{flexGrow: 1}}
+        onContentSizeChange={handleContentSizeChange}>
+        <Pressable onPress={deleteMessages}>
+          <Text>Delete All Messages</Text>
+        </Pressable>
         {messages.map((item, index) => {
           if (item.text) {
             return (
@@ -231,6 +260,9 @@ const ChatMessagesScreen = () => {
                 ]}>
                 <Text style={{fontSize: 13, textAlign: 'left'}}>
                   {item?.text}
+                </Text>
+                <Text style={{fontSize: 10, color: 'gray'}}>
+                  Sent by: {item?.userId?._id}
                 </Text>
                 <Text
                   style={{
@@ -357,7 +389,7 @@ const ChatMessagesScreen = () => {
         </View>
 
         <Pressable
-          onPress={() => handleSend('text')}
+          onPress={() => handleSend()}
           style={{
             backgroundColor: '#007bff',
             paddingVertical: 8,

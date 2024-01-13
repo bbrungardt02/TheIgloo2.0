@@ -3,17 +3,17 @@ import {StyleSheet, Text, View, Button, TextInput} from 'react-native';
 import React, {useState, useEffect} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {Picker} from '@react-native-picker/picker';
+import {useNavigation} from '@react-navigation/native';
 
 const NewChatScreen = () => {
   const [recipientId, setRecipientId] = useState('');
   const [friends, setFriends] = React.useState([]);
   const [selectedFriend, setSelectedFriend] = useState('');
+  const navigation = useNavigation();
 
   const createNewChat = async () => {
     try {
       const senderId = await AsyncStorage.getItem('userId');
-      console.log('SenderId:', senderId); // Add this line
-      console.log('RecipientId:', recipientId); // Add this line
       const URL = `${SERVER_ADDRESS}/conversation`;
       const response = await fetch(URL, {
         method: 'POST',
@@ -23,7 +23,7 @@ const NewChatScreen = () => {
         },
         body: JSON.stringify({
           senderId,
-          recipientId,
+          recipientIds: [recipientId],
         }),
       });
 
@@ -32,6 +32,11 @@ const NewChatScreen = () => {
 
       if (response.ok) {
         console.log('New chat created', data);
+        navigation.navigate('ChatScreen', {
+          conversationId: data._id,
+        });
+
+        // Join the newly created chat room
       } else {
         console.log('Failed to create new chat', data);
       }

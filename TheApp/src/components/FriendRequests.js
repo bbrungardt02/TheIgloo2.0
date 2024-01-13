@@ -11,7 +11,8 @@ const FriendRequests = ({item, friendRequests, setFriendRequests}) => {
   const acceptRequest = async friendRequestId => {
     try {
       const token = await AsyncStorage.getItem('authToken');
-      const response = await fetch(`${SERVER_ADDRESS}/friend-request/accept`, {
+      const URL = `${SERVER_ADDRESS}/friend-request/accept`;
+      const response = await fetch(URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

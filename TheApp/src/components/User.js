@@ -10,8 +10,8 @@ const User = ({item}) => {
   const sendFriendRequest = async (currentUserId, selectedUserId) => {
     try {
       const token = await AsyncStorage.getItem('authToken');
-
-      const response = await fetch(`${SERVER_ADDRESS}/friend-request`, {
+      const URL = `${SERVER_ADDRESS}/friend-request`;
+      const response = await fetch(URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

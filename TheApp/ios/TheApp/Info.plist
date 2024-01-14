@@ -45,6 +45,8 @@
 	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>Your app requires access to the camera for capturing photos.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>The Igloo requires Face ID access to authenticate with biometrics</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string></string>
 	<key>NSMicrophoneUsageDescription</key>

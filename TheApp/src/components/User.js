@@ -1,28 +1,18 @@
-import {SERVER_ADDRESS} from '@env';
 import {StyleSheet, Text, View, Pressable, Image} from 'react-native';
 import React, {useContext} from 'react';
 import {UserType} from '../../UserContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import API from '../config/API';
 
 const User = ({item}) => {
   const {userId, setUserId} = useContext(UserType);
   const [requestSent, setRequestSent] = React.useState(false);
   const sendFriendRequest = async (currentUserId, selectedUserId) => {
     try {
-      const token = await AsyncStorage.getItem('authToken');
-      const URL = `${SERVER_ADDRESS}/friend-request`;
-      const response = await fetch(URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          currentUserId,
-          selectedUserId,
-        }),
+      const response = await API.post(`/friend-request`, {
+        currentUserId,
+        selectedUserId,
       });
-      if (response.ok) {
+      if (response.status === 200) {
         setRequestSent(true);
       }
     } catch (error) {

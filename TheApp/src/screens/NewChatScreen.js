@@ -4,6 +4,7 @@ import React, {useState, useEffect} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {Picker} from '@react-native-picker/picker';
 import {useNavigation} from '@react-navigation/native';
+import API from '../config/API';
 
 const NewChatScreen = () => {
   const [recipientId, setRecipientId] = useState('');
@@ -14,31 +15,18 @@ const NewChatScreen = () => {
   const createNewChat = async () => {
     try {
       const senderId = await AsyncStorage.getItem('userId');
-      const URL = `${SERVER_ADDRESS}/conversation`;
-      const response = await fetch(URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${await AsyncStorage.getItem('authToken')}`,
-        },
-        body: JSON.stringify({
-          senderId,
-          recipientIds: [recipientId],
-        }),
+      const response = await API.post(`/conversation`, {
+        senderId,
+        recipientIds: [recipientId],
       });
 
-      const data = await response.json();
-      console.log('Fetch response:', data); // Add this line
-
-      if (response.ok) {
-        console.log('New chat created', data);
+      if (response.status === 200) {
+        console.log('New chat created', response.data);
         navigation.navigate('ChatScreen', {
-          conversationId: data._id,
+          conversationId: response.data._id,
         });
-
-        // Join the newly created chat room
       } else {
-        console.log('Failed to create new chat', data);
+        console.log('Failed to create new chat', response.data);
       }
     } catch (error) {
       console.log('Error creating new chat', error);
@@ -48,19 +36,12 @@ const NewChatScreen = () => {
   useEffect(() => {
     const friendsList = async () => {
       try {
-        const token = await AsyncStorage.getItem('authToken');
         const userId = await AsyncStorage.getItem('userId');
-        const URL2 = `${SERVER_ADDRESS}/friends/${userId}`;
-        const response = await fetch(URL2, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const data = await response.json();
+        const response = await API.get(`/friends/${userId}`);
 
-        if (response.ok) {
-          setFriends(data);
-          console.log('Friends list:', data); // Add this line
+        if (response.status === 200) {
+          setFriends(response.data);
+          console.log('Friends list:', response.data);
         }
       } catch (error) {
         console.log('error fetching friends list', error);

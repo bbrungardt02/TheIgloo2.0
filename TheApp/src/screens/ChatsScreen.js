@@ -6,6 +6,7 @@ import {useNavigation} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import UserChat from '../components/UserChat';
 import Icon from 'react-native-vector-icons/Ionicons';
+import API from '../config/API';
 
 const ChatsScreen = () => {
   const [conversations, setConversations] = React.useState([]);
@@ -31,20 +32,12 @@ const ChatsScreen = () => {
   useEffect(() => {
     const conversationsList = async () => {
       try {
-        const token = await AsyncStorage.getItem('authToken');
-        const URL = `${SERVER_ADDRESS}/conversations/${userId}`;
-        const response = await fetch(URL, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const data = await response.json();
-
-        if (response.ok) {
-          setConversations(data);
+        const response = await API.get(`/conversations/${userId}`);
+        if (response.status === 200) {
+          setConversations(response.data);
         }
       } catch (error) {
-        console.log('error fetching friends list', error);
+        console.log('error fetching conversations list', error);
       }
     };
     conversationsList();

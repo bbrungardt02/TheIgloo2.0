@@ -4,26 +4,18 @@ import React, {useContext} from 'react';
 import {UserType} from '../../UserContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useNavigation} from '@react-navigation/native';
+import API from '../config/API';
 
 const FriendRequests = ({item, friendRequests, setFriendRequests}) => {
   const {userId, setUserId} = useContext(UserType);
   const navigation = useNavigation();
   const acceptRequest = async friendRequestId => {
     try {
-      const token = await AsyncStorage.getItem('authToken');
-      const URL = `${SERVER_ADDRESS}/friend-request/accept`;
-      const response = await fetch(URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          senderId: friendRequestId,
-          recipientId: userId,
-        }),
+      const response = await API.post(`/friend-request/accept`, {
+        senderId: friendRequestId,
+        recipientId: userId,
       });
-      if (response.ok) {
+      if (response.status === 200) {
         setFriendRequests(
           friendRequests.filter(response => response._id !== friendRequestId),
           navigation.navigate('Chats'),

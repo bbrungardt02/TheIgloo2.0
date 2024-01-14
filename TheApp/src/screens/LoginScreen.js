@@ -10,9 +10,12 @@ import {
 import React, {useEffect} from 'react';
 import {TextInput, GestureHandlerRootView} from 'react-native-gesture-handler';
 import {useNavigation} from '@react-navigation/native';
-import axios from 'axios';
+import API from '../config/API';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {connectSocket} from '../components/Socket';
+import * as Keychain from 'react-native-keychain';
+
+let accessToken = null;
 
 const LoginScreen = () => {
   const [email, setEmail] = React.useState('');
@@ -22,16 +25,23 @@ const LoginScreen = () => {
   useEffect(() => {
     const checkLoginStatus = async () => {
       try {
-        const token = await AsyncStorage.getItem('authToken');
-        const userId = await AsyncStorage.getItem('userId');
+        const credentials = await Keychain.getGenericPassword();
+        if (credentials) {
+          const {username: userId, password: refreshToken} = credentials;
 
-        if (token && userId) {
+          // Access token not found or expired, get a new one using the refresh token
+          const URL = `${SERVER_ADDRESS}/token`;
+          const response = await API.post(URL, {
+            refreshToken: refreshToken,
+          });
+          accessToken = response.data.accessToken;
+
           // Connect to the socket and set the user online
           connectSocket(userId);
 
           navigation.replace('Home');
         } else {
-          // token not found , show the login screen itself
+          // Refresh token not found, show the login screen itself
         }
       } catch (error) {
         console.log('error', error);
@@ -49,14 +59,12 @@ const LoginScreen = () => {
     // console.log(`server address, ${SERVER_ADDRESS}`); // for debugging EC2 instance network connection ( had to access to the address inside p list for iOS)
     const URL = `${SERVER_ADDRESS}/login`;
     // console.log('SERVER URL', URL); // same thing here
-    axios
-      .post(URL, user)
-      .then(response => {
-        // console.log(response);  // for debugging purposes
-        const token = response.data.token;
+    API.post(URL, user)
+      .then(async response => {
+        accessToken = response.data.accessToken; // Modify this line
+        const refreshToken = response.data.refreshToken;
         const userId = response.data.userId;
-        AsyncStorage.setItem('authToken', token);
-        AsyncStorage.setItem('userId', userId.toString());
+        await Keychain.setGenericPassword(userId.toString(), refreshToken);
 
         // Connect to the socket and set the user online
         connectSocket(userId);

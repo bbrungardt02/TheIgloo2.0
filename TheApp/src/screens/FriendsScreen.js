@@ -5,37 +5,32 @@ import {UserType} from '../../UserContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import FriendRequests from '../components/FriendRequests';
+import API from '../config/API';
 
 const FriendsScreen = () => {
   const {userId, setUserId} = useContext(UserType);
   const [friendRequests, setFriendRequests] = React.useState([]);
 
   useEffect(() => {
+    const fetchFriendRequests = async () => {
+      try {
+        const response = await API.get(`/friend-requests/${userId}`);
+        if (response.status === 200) {
+          const friendRequestsData = response.data.map(friendRequest => ({
+            _id: friendRequest._id,
+            name: friendRequest.name,
+            email: friendRequest.email,
+            image: friendRequest.image,
+          }));
+          setFriendRequests(friendRequestsData);
+        }
+      } catch (error) {
+        console.log('error fetching friend requests', error);
+      }
+    };
+
     fetchFriendRequests();
   }, []);
-
-  const fetchFriendRequests = async () => {
-    try {
-      const token = await AsyncStorage.getItem('authToken');
-      const URL = `${SERVER_ADDRESS}/friend-requests/${userId}`;
-      const response = await axios.get(URL, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (response.status === 200) {
-        const friendRequestsData = response.data.map(friendRequest => ({
-          _id: friendRequest._id,
-          name: friendRequest.name,
-          email: friendRequest.email,
-          image: friendRequest.image,
-        }));
-        setFriendRequests(friendRequestsData);
-      }
-    } catch (error) {
-      console.log('error fetching friend requests', error);
-    }
-  };
 
   console.log('friendRequests', friendRequests); // for debugging purposes
   return (

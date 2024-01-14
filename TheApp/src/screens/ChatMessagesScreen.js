@@ -1,4 +1,3 @@
-import {SERVER_ADDRESS} from '@env';
 import {
   StyleSheet,
   Text,
@@ -17,7 +16,6 @@ import Entypo from 'react-native-vector-icons/Entypo';
 import IonIcons from 'react-native-vector-icons/Ionicons';
 import EmojiSelector from 'react-native-emoji-selector';
 import {useRoute} from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useNavigation} from '@react-navigation/native';
 import * as ImagePicker from 'react-native-image-picker';
 import {
@@ -26,6 +24,7 @@ import {
   onMessageReceived,
   leaveConversation,
 } from '../components/Socket';
+import API from '../config/API';
 
 const ChatMessagesScreen = () => {
   const {userId} = useContext(UserType);
@@ -74,21 +73,14 @@ const ChatMessagesScreen = () => {
   }, [conversationId]); // Remove isJoined from the dependency array
 
   const fetchMessages = async conversationId => {
-    const token = await AsyncStorage.getItem('authToken');
-    const URL = `${SERVER_ADDRESS}/messages/${conversationId}`;
-    const response = await fetch(URL, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Error fetching messages');
+    try {
+      const response = await API.get(`/messages/${conversationId}`);
+      if (response.status === 200) {
+        setMessages(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching messages', error);
     }
-
-    const messages = await response.json();
-
-    setMessages(messages);
   };
 
   useEffect(() => {
@@ -104,15 +96,10 @@ const ChatMessagesScreen = () => {
   useEffect(() => {
     const fetchRecipientData = async () => {
       try {
-        const token = await AsyncStorage.getItem('authToken');
-        const URL2 = `${SERVER_ADDRESS}/user/${recipientId}`;
-        const response = await fetch(URL2, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const data = await response.json();
-        setRecipientData(data);
+        const response = await API.get(`/user/${recipientId}`);
+        if (response.status === 200) {
+          setRecipientData(response.data);
+        }
       } catch (error) {
         console.log('error fetching recipient data', error);
       }
@@ -207,22 +194,15 @@ const ChatMessagesScreen = () => {
   // deletes all messages in the conversation for both users, used to clean database up for testing
 
   const deleteMessages = async () => {
-    const token = await AsyncStorage.getItem('authToken');
-    const URL = `${SERVER_ADDRESS}/messages/${conversationId}`;
-    const response = await fetch(URL, {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Error deleting messages');
+    try {
+      const response = await API.delete(`/messages/${conversationId}`);
+      if (response.status === 200) {
+        console.log(response.data.message);
+        setMessages([]);
+      }
+    } catch (error) {
+      console.error('Error deleting messages', error);
     }
-
-    const result = await response.json();
-    console.log(result.message);
-    setMessages([]);
   };
 
   return (

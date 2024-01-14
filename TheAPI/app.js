@@ -1,7 +1,12 @@
 require("dotenv").config();
 
 // Environment Variables Validation
-if (!process.env.JWT_SECRET_KEY || !process.env.MONGOURI || !process.env.PORT) {
+if (
+  !process.env.ACCESS_TOKEN_SECRET ||
+  !process.env.REFRESH_TOKEN_SECRET ||
+  !process.env.MONGOURI ||
+  !process.env.PORT
+) {
   console.error("Missing environment variables");
   process.exit(1);
 }
@@ -49,27 +54,52 @@ function authenticateJWT(req, res, next) {
   if (authHeader) {
     const token = authHeader.split(" ")[1];
 
-    return new Promise((resolve, reject) => {
-      jwt.verify(token, process.env.JWT_SECRET_KEY, (err, user) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(user);
-        }
-      });
-    })
-      .then((user) => {
-        req.user = user;
-        next();
-      })
-      .catch((err) => {
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
+      if (err) {
         console.log(err);
-        res.sendStatus(403);
-      });
+        return res.sendStatus(403);
+      }
+
+      req.user = user;
+      next();
+    });
   } else {
     res.sendStatus(401);
   }
 }
+
+// function to create a token for a user
+const createToken = (userId, secret, expiresIn) => {
+  // set the token payload
+  const payload = {
+    userId: userId,
+  };
+
+  // generate the token with a secret key and expiration time
+  const token = jwt.sign(payload, secret, {
+    expiresIn: expiresIn,
+  });
+  return token;
+};
+
+app.post("/token", (req, res) => {
+  const refreshToken = req.body.refreshToken;
+  console.log("Received refresh token:", refreshToken); // Log the received refresh token
+
+  if (!refreshToken) return res.sendStatus(401);
+
+  jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, user) => {
+    if (err) return res.sendStatus(403);
+
+    const accessToken = createToken(
+      user.userId,
+      process.env.ACCESS_TOKEN_SECRET,
+      "15m"
+    );
+
+    res.json({ accessToken });
+  });
+});
 
 // Socket.io code for real-time chat
 
@@ -218,18 +248,18 @@ app.delete("/messages/:conversationId", authenticateJWT, async (req, res) => {
   }
 });
 
-// endpoint to access all the users for testing purposes
-app.get("/users", async (req, res) => {
-  User.find()
-    .select("name") // find all the users and select only the 'name' field
-    .then((users) => {
-      res.json(users);
-    })
-    .catch((err) => {
-      console.log("Error getting users: ", err);
-      res.status(500).json({ message: "Failed to get users!" });
-    });
-});
+// // endpoint to access all the users for testing purposes
+// app.get("/users", async (req, res) => {
+//   User.find()
+//     .select("name") // find all the users and select only the 'name' field
+//     .then((users) => {
+//       res.json(users);
+//     })
+//     .catch((err) => {
+//       console.log("Error getting users: ", err);
+//       res.status(500).json({ message: "Failed to get users!" });
+//     });
+// });
 
 // endpoint for registering a new user
 app.post("/register", async (req, res) => {
@@ -244,7 +274,22 @@ app.post("/register", async (req, res) => {
   // save user to database
   try {
     await newUser.save();
-    res.status(200).json({ message: "Successfully registered user" });
+    const accessToken = createToken(
+      user._id,
+      process.env.ACCESS_TOKEN_SECRET,
+      "15m"
+    );
+    const refreshToken = createToken(
+      user._id,
+      process.env.REFRESH_TOKEN_SECRET,
+      "7d"
+    );
+    res.status(200).json({
+      message: "Successfully registered user",
+      accessToken,
+      refreshToken,
+      userId: newUser._id,
+    });
   } catch (err) {
     console.log("Error registering user: ", err);
     res
@@ -252,20 +297,6 @@ app.post("/register", async (req, res) => {
       .json({ message: `Failed to register the user: ${err.message}` });
   }
 });
-
-// function to create a token for a user
-const createToken = (userId) => {
-  // set the token payload
-  const payload = {
-    userId: userId,
-  };
-
-  // generate the token with a secret key and expiration time
-  const token = jwt.sign(payload, process.env.JWT_SECRET_KEY, {
-    expiresIn: "7d",
-  });
-  return token;
-};
 
 // endpoint for logging in a user
 app.post("/login", async (req, res) => {
@@ -292,9 +323,17 @@ app.post("/login", async (req, res) => {
       if (!match) {
         return res.status(401).json({ message: "Incorrect password!" });
       }
-
-      const token = createToken(user._id);
-      res.status(200).json({ token, userId: user._id });
+      const accessToken = createToken(
+        user._id,
+        process.env.ACCESS_TOKEN_SECRET,
+        "15m"
+      );
+      const refreshToken = createToken(
+        user._id,
+        process.env.REFRESH_TOKEN_SECRET,
+        "7d"
+      );
+      res.status(200).json({ accessToken, refreshToken, userId: user._id });
     })
     .catch((err) => {
       console.log("Error logging in user: ", err);

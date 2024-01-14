@@ -1,13 +1,12 @@
-import {SERVER_ADDRESS} from '@env';
 import {StyleSheet, Text, View} from 'react-native';
 import React, {useLayoutEffect, useContext, useEffect} from 'react';
 import {useNavigation} from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import {UserType} from '../../UserContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
+import API from '../config/API';
 import User from '../components/User';
+import * as Keychain from 'react-native-keychain';
 
 const HomeScreen = () => {
   const navigation = useNavigation();
@@ -41,22 +40,20 @@ const HomeScreen = () => {
 
   useEffect(() => {
     const fetchUsers = async () => {
-      const token = await AsyncStorage.getItem('authToken');
-      const userId = await AsyncStorage.getItem('userId');
-      setUserId(userId);
-      const URL = `${SERVER_ADDRESS}/users/${userId}`;
-      axios
-        .get(URL, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-        .then(response => {
-          setUsers(response.data);
-        })
-        .catch(error => {
-          console.log('error retrieving users', error);
-        });
+      const credentials = await Keychain.getGenericPassword();
+      if (credentials) {
+        const {username: userId} = credentials;
+        setUserId(userId);
+        const URL = `/users/${userId}`;
+        console.log('URL', URL);
+        API.get(URL)
+          .then(response => {
+            setUsers(response.data);
+          })
+          .catch(error => {
+            console.log('error retrieving users', error);
+          });
+      }
     };
 
     fetchUsers();

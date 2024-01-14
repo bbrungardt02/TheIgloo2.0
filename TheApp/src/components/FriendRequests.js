@@ -1,8 +1,6 @@
-import {SERVER_ADDRESS} from '@env';
 import {StyleSheet, Text, View, Pressable, Image} from 'react-native';
 import React, {useContext} from 'react';
 import {UserType} from '../../UserContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useNavigation} from '@react-navigation/native';
 import API from '../config/API';
 

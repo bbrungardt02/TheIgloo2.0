@@ -1,11 +1,11 @@
 import io from 'socket.io-client';
-import {SERVER_ADDRESS} from '@env';
+import {baseURL} from '../config/API';
 
 let socket;
 
 export function connectSocket(userId) {
   // Connect to the socket server
-  const socketAddress = SERVER_ADDRESS;
+  const socketAddress = baseURL;
   socket = io(socketAddress, {
     query: {userId},
   });

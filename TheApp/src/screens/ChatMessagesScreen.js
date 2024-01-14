@@ -25,6 +25,7 @@ import {
   leaveConversation,
 } from '../components/Socket';
 import API from '../config/API';
+import {Platform} from 'react-native';
 
 const ChatMessagesScreen = () => {
   const {userId} = useContext(UserType);
@@ -46,16 +47,18 @@ const ChatMessagesScreen = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, []);
+  }, [messages]);
 
   const scrollToBottom = () => {
     if (scrollViewRef.current) {
-      scrollViewRef.current.scrollToEnd({animated: false});
+      if (Platform.OS === 'ios') {
+        scrollViewRef.current.scrollToEnd({animated: false});
+      } else if (Platform.OS === 'android') {
+        setTimeout(() => {
+          scrollViewRef.current.scrollTo({y: 1000000, animated: false});
+        }, 100);
+      }
     }
-  };
-
-  const handleContentSizeChange = () => {
-    scrollToBottom();
   };
 
   useEffect(() => {
@@ -173,15 +176,17 @@ const ChatMessagesScreen = () => {
           />
 
           <View style={{flexDirection: 'row', alignItems: 'center'}}>
-            <Image
-              style={{
-                width: 30,
-                height: 30,
-                borderRadius: 15,
-                resizeMode: 'cover',
-              }}
-              source={{uri: recipientData?.image}}
-            />
+            {recipientData && recipientData.image && (
+              <Image
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 15,
+                  resizeMode: 'cover',
+                }}
+                source={{uri: recipientData.image}}
+              />
+            )}
             <Text style={{marginLeft: 5, fontSize: 15, fontWeight: 'bold'}}>
               {recipientData?.name}
             </Text>
@@ -210,7 +215,7 @@ const ChatMessagesScreen = () => {
       <ScrollView
         ref={scrollViewRef}
         contentContainerStyle={{flexGrow: 1}}
-        onContentSizeChange={handleContentSizeChange}>
+        onContentSizeChange={scrollToBottom}>
         <Pressable onPress={deleteMessages}>
           <Text>Delete All Messages</Text>
         </Pressable>

@@ -1,9 +1,6 @@
-import {SERVER_ADDRESS} from '@env';
 import {StyleSheet, Text, View} from 'react-native';
 import React, {useEffect, useContext} from 'react';
 import {UserType} from '../../UserContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
 import FriendRequests from '../components/FriendRequests';
 import API from '../config/API';
 

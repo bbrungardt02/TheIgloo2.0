@@ -1,4 +1,3 @@
-import {SERVER_ADDRESS} from '@env';
 import {StyleSheet, Text, View, Button, TextInput} from 'react-native';
 import React, {useState, useEffect} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';

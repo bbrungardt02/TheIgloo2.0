@@ -1,9 +1,7 @@
-import {SERVER_ADDRESS} from '@env';
 import {StyleSheet, Text, View, ScrollView, Pressable} from 'react-native';
 import React, {useContext, useEffect, useLayoutEffect} from 'react';
 import {UserType} from '../../UserContext';
 import {useNavigation} from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import UserChat from '../components/UserChat';
 import Icon from 'react-native-vector-icons/Ionicons';
 import API from '../config/API';

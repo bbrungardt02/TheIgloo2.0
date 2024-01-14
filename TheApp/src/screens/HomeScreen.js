@@ -45,7 +45,6 @@ const HomeScreen = () => {
         const {username: userId} = credentials;
         setUserId(userId);
         const URL = `/users/${userId}`;
-        console.log('URL', URL);
         API.get(URL)
           .then(response => {
             setUsers(response.data);

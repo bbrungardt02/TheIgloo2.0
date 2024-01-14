@@ -84,7 +84,6 @@ const createToken = (userId, secret, expiresIn) => {
 
 app.post("/token", (req, res) => {
   const refreshToken = req.body.refreshToken;
-  console.log("Received refresh token:", refreshToken); // Log the received refresh token
 
   if (!refreshToken) return res.sendStatus(401);
 
@@ -178,9 +177,6 @@ io.on("connection", (socket) => {
       });
 
       io.to(conversationId).emit("message", newMessage);
-
-      console.log("message", newMessage);
-      console.log("conversationId", conversationId);
     } catch (error) {
       console.log("Error sending message: ", error);
     }

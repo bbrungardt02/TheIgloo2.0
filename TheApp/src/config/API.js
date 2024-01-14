@@ -2,13 +2,19 @@ import axios from 'axios';
 import * as Keychain from 'react-native-keychain';
 import {SERVER_ADDRESS} from '@env';
 import {Alert} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {Platform} from 'react-native';
 
 let accessToken = null;
 
+// android reads localhost as the simulator's own local running address so we need to use this weird workaround
+export const baseURL =
+  Platform.OS === 'android' ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+
 // Create an Axios instance
 const API = axios.create({
-  baseURL: SERVER_ADDRESS,
+  // Switch out baseURL with the one below for connection to EC2 instance
+  baseURL,
+  // baseURL: SERVER_ADDRESS,
 });
 
 // Add a request interceptor
@@ -20,21 +26,17 @@ API.interceptors.request.use(
       if (credentials) {
         const {username: userId, password: refreshToken} = credentials;
 
-        console.log('Refresh token:', refreshToken); // Log the refresh token
-
         // Access token not found or expired, get a new one using the refresh token
         try {
-          const response = await axios.post(`${SERVER_ADDRESS}/token`, {
+          const response = await axios.post(`${baseURL}/token`, {
             refreshToken: refreshToken,
           });
           accessToken = response.data.accessToken;
-
-          console.log('New access token:', accessToken); // Log the new access token
         } catch (error) {
           if (error.response && error.response.status === 401) {
             // Refresh token is invalid or expired, clear the stored credentials
             await Keychain.resetGenericPassword();
-            Alert.alert('Session expired', 'Please login again.'); // Show an alert to the user
+            Alert.alert('Session expired', 'Please login again.');
             // TODO: Redirect the user to the login screen
           } else {
             console.log('Error getting access token:', error.message);

@@ -1,4 +1,4 @@
-import {SERVER_ADDRESS} from '@env';
+import {baseURL} from '../config/API';
 import {
   KeyboardAvoidingView,
   Pressable,
@@ -10,10 +10,9 @@ import {
 import React, {useEffect} from 'react';
 import {TextInput, GestureHandlerRootView} from 'react-native-gesture-handler';
 import {useNavigation} from '@react-navigation/native';
-import API from '../config/API';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {connectSocket} from '../components/Socket';
 import * as Keychain from 'react-native-keychain';
+import axios from 'axios';
 
 let accessToken = null;
 
@@ -30,13 +29,13 @@ const LoginScreen = () => {
           const {username: userId, password: refreshToken} = credentials;
 
           // Access token not found or expired, get a new one using the refresh token
-          const URL = `${SERVER_ADDRESS}/token`;
-          const response = await API.post(URL, {
+          const URL = `${baseURL}/token`;
+          const response = await axios.post(URL, {
             refreshToken: refreshToken,
           });
           accessToken = response.data.accessToken;
 
-          // Connect to the socket and set the user online
+          // Connect to the socket using socket.io and set the user online
           connectSocket(userId);
 
           navigation.replace('Home');
@@ -56,12 +55,11 @@ const LoginScreen = () => {
       email: email,
       password: password,
     };
-    // console.log(`server address, ${SERVER_ADDRESS}`); // for debugging EC2 instance network connection ( had to access to the address inside p list for iOS)
-    const URL = `${SERVER_ADDRESS}/login`;
-    // console.log('SERVER URL', URL); // same thing here
-    API.post(URL, user)
+    const URL = `${baseURL}/login`;
+    axios
+      .post(URL, user)
       .then(async response => {
-        accessToken = response.data.accessToken; // Modify this line
+        accessToken = response.data.accessToken;
         const refreshToken = response.data.refreshToken;
         const userId = response.data.userId;
         await Keychain.setGenericPassword(userId.toString(), refreshToken);

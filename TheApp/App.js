@@ -1,4 +1,4 @@
-import React, {useContext} from 'react';
+import React from 'react';
 import {StatusBar} from 'react-native';
 import {StyleSheet, Text, View, ImageBackground} from 'react-native';
 import StackNavigator from './StackNavigator';

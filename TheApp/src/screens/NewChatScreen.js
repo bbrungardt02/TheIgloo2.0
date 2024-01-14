@@ -1,11 +1,12 @@
 import {StyleSheet, Text, View, Button, TextInput} from 'react-native';
-import React, {useState, useEffect} from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, {useState, useEffect, useContext} from 'react';
 import {Picker} from '@react-native-picker/picker';
 import {useNavigation} from '@react-navigation/native';
 import API from '../config/API';
+import {UserType} from '../../UserContext';
 
 const NewChatScreen = () => {
+  const {userId, setUserId} = useContext(UserType);
   const [recipientId, setRecipientId] = useState('');
   const [friends, setFriends] = React.useState([]);
   const [selectedFriend, setSelectedFriend] = useState('');
@@ -13,15 +14,15 @@ const NewChatScreen = () => {
 
   const createNewChat = async () => {
     try {
-      const senderId = await AsyncStorage.getItem('userId');
+      // const senderId = userId;
       const response = await API.post(`/conversation`, {
-        senderId,
+        senderId: userId,
         recipientIds: [recipientId],
       });
 
       if (response.status === 200) {
         console.log('New chat created', response.data);
-        navigation.navigate('ChatScreen', {
+        navigation.navigate('Chats', {
           conversationId: response.data._id,
         });
       } else {
@@ -35,7 +36,6 @@ const NewChatScreen = () => {
   useEffect(() => {
     const friendsList = async () => {
       try {
-        const userId = await AsyncStorage.getItem('userId');
         const response = await API.get(`/friends/${userId}`);
 
         if (response.status === 200) {

@@ -7,12 +7,14 @@ import {Platform} from 'react-native';
 let accessToken = null;
 
 // android reads localhost as the simulator's own local running address so we need to use this weird workaround
+// Switch out baseURL with SERVER_ADDRESS below for connection to EC2 instance
+
 export const baseURL =
   Platform.OS === 'android' ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+// SERVER_ADDRESS;
 
 // Create an Axios instance
 const API = axios.create({
-  // Switch out baseURL with the one below for connection to EC2 instance
   baseURL,
   // baseURL: SERVER_ADDRESS,
 });

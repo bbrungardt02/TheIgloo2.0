@@ -28,7 +28,7 @@ const HomeScreen = () => {
             color="black"
           />
           <MaterialIcons
-            onPress={() => navigation.navigate('Friends')}
+            onPress={() => navigation.navigate('Friend Requests')}
             name="people-outline"
             size={24}
             color="black"

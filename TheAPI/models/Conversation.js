@@ -5,6 +5,7 @@ const ConversationSchema = new mongoose.Schema({
   messages: [{ type: mongoose.Schema.Types.ObjectId, ref: "Message" }],
   lastMessage: { type: mongoose.Schema.Types.ObjectId, ref: "Message" },
   timestamp: { type: Date, default: Date.now },
+  name: { type: String },
 });
 
 const Conversation = mongoose.model("Conversation", ConversationSchema);

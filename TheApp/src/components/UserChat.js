@@ -11,7 +11,6 @@ const UserChat = ({item}) => {
   const otherParticipants = item.participants.filter(
     participant => participant._id !== userId,
   );
-
   // Select the first participant that is not the current user
   const firstOtherParticipant = otherParticipants[0];
 
@@ -35,6 +34,7 @@ const UserChat = ({item}) => {
         borderLeftWidth: 0,
         borderRightWidth: 0,
         padding: 10,
+        backgroundColor: '#DDD',
       }}>
       <Image
         style={{width: 50, height: 50, borderRadius: 25, resizeMode: 'cover'}}
@@ -42,7 +42,7 @@ const UserChat = ({item}) => {
       />
       <View style={{flex: 1}}>
         <Text style={{fontSize: 15, fontWeight: '500'}}>
-          {firstOtherParticipant?.name}
+          {item?.name ? item?.name : firstOtherParticipant?.name}
         </Text>
         <Text style={{marginTop: 3, color: 'gray', fontWeight: '500'}}>
           {lastMessage?.text}

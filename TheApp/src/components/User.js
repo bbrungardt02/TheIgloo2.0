@@ -8,7 +8,7 @@ const User = ({item}) => {
   const [requestSent, setRequestSent] = React.useState(false);
   const sendFriendRequest = async (currentUserId, selectedUserId) => {
     try {
-      const response = await API.post(`/friend-request`, {
+      const response = await API.post(`/friends/request`, {
         currentUserId,
         selectedUserId,
       });

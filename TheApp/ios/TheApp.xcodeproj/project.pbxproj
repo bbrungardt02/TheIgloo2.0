@@ -475,6 +475,8 @@
 				DEVELOPMENT_TEAM = LR6DVDUS36;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = TheApp/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "The Igloo";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -502,6 +504,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = LR6DVDUS36;
 				INFOPLIST_FILE = TheApp/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "The Igloo";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

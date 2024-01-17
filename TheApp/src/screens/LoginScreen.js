@@ -29,7 +29,7 @@ const LoginScreen = () => {
           const {username: userId, password: refreshToken} = credentials;
 
           // Access token not found or expired, get a new one using the refresh token
-          const URL = `${baseURL}/token`;
+          const URL = `${baseURL}/users/token`;
           const response = await axios.post(URL, {
             refreshToken: refreshToken,
           });
@@ -55,7 +55,7 @@ const LoginScreen = () => {
       email: email,
       password: password,
     };
-    const URL = `${baseURL}/login`;
+    const URL = `${baseURL}/users/login`;
     axios
       .post(URL, user)
       .then(async response => {

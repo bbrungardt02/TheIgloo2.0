@@ -3,13 +3,14 @@ import {StatusBar} from 'react-native';
 import {StyleSheet, Text, View, ImageBackground} from 'react-native';
 import StackNavigator from './StackNavigator';
 import {UserContext} from './UserContext';
+import Toast from 'react-native-toast-message';
 
 function App() {
   return (
     <>
-      {/* <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="dark-content" />
       <View style={styles.sectionContainer}></View>
-      <View
+      {/* <View
         style={{
           flex: 1,
         }}>
@@ -24,9 +25,11 @@ function App() {
             </Text>
           </ImageBackground>
         </View> */}
+
       <UserContext>
         <StackNavigator />
       </UserContext>
+      <Toast />
       {/* </View> */}
     </>
   );
@@ -38,8 +41,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   iglooTitle: {
-    color: '#006064', // dark cyan color
-    textShadowColor: '#FFFFFF', // white shadow
+    color: '#006064', // dark cyan
+    textShadowColor: '#FFFFFF', // white
     textShadowOffset: {width: -1, height: 1},
     textShadowRadius: 2,
     fontWeight: 'bold',

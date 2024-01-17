@@ -34,11 +34,11 @@ const StackNavigator = () => {
 
         <Stack.Screen name="Home" component={HomeScreen} />
 
-        <Stack.Screen name="Friends" component={FriendsScreen} />
+        <Stack.Screen name="Friend Requests" component={FriendsScreen} />
 
         <Stack.Screen name="Chats" component={ChatsScreen} />
 
-        <Stack.Screen name="NewChat" component={NewChatScreen} />
+        <Stack.Screen name="New Chat" component={NewChatScreen} />
 
         <Stack.Screen name="Messages" component={ChatMessagesScreen} />
       </Stack.Navigator>

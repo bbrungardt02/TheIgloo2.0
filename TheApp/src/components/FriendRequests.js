@@ -9,7 +9,7 @@ const FriendRequests = ({item, friendRequests, setFriendRequests}) => {
   const navigation = useNavigation();
   const acceptRequest = async friendRequestId => {
     try {
-      const response = await API.post(`/friend-request/accept`, {
+      const response = await API.post(`/friends/accept`, {
         senderId: friendRequestId,
         recipientId: userId,
       });

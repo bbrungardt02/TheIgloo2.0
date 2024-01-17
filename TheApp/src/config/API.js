@@ -30,7 +30,7 @@ API.interceptors.request.use(
 
         // Access token not found or expired, get a new one using the refresh token
         try {
-          const response = await axios.post(`${baseURL}/token`, {
+          const response = await axios.post(`${baseURL}/users/token`, {
             refreshToken: refreshToken,
           });
           accessToken = response.data.accessToken;

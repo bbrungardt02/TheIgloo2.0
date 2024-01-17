@@ -11,7 +11,7 @@ const FriendsScreen = () => {
   useEffect(() => {
     const fetchFriendRequests = async () => {
       try {
-        const response = await API.get(`/friend-requests/${userId}`);
+        const response = await API.get(`/friends/requests/${userId}`);
         if (response.status === 200) {
           const friendRequestsData = response.data.map(friendRequest => ({
             _id: friendRequest._id,
@@ -29,7 +29,7 @@ const FriendsScreen = () => {
     fetchFriendRequests();
   }, []);
 
-  console.log('friendRequests', friendRequests); // for debugging purposes
+  // console.log('friendRequests', friendRequests); // for debugging purposes
   return (
     <View style={{padding: 10, marginHorizontal: 12}}>
       {friendRequests.length > 0 && <Text>Friend Requests</Text>}

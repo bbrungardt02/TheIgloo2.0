@@ -32,11 +32,12 @@ const ChatMessagesScreen = () => {
   const [message, setMessage] = React.useState('');
   const [messages, setMessages] = React.useState([]);
   const route = useRoute();
-  const {conversationId, recipientId} = route.params;
+  const {conversationId} = route.params;
   const [selectedImage, setSelectedImage] = React.useState('');
   const navigation = useNavigation();
-  const [recipientData, setRecipientData] = React.useState();
+  const [recipientsData, setRecipientsData] = React.useState([]);
   const isJoined = React.useRef(false);
+  const [groupName, setGroupName] = React.useState('');
 
   const [showEmojiSelector, setShowEmojiSelector] = React.useState(false);
   const handleEmojiPress = () => {
@@ -77,7 +78,7 @@ const ChatMessagesScreen = () => {
 
   const fetchMessages = async conversationId => {
     try {
-      const response = await API.get(`/messages/${conversationId}`);
+      const response = await API.get(`/chats/messages/${conversationId}`);
       if (response.status === 200) {
         setMessages(response.data);
       }
@@ -94,21 +95,6 @@ const ChatMessagesScreen = () => {
     onMessageReceived(message => {
       setMessages(prevMessages => [...prevMessages, message]);
     });
-  }, []);
-
-  useEffect(() => {
-    const fetchRecipientData = async () => {
-      try {
-        const response = await API.get(`/user/${recipientId}`);
-        if (response.status === 200) {
-          setRecipientData(response.data);
-        }
-      } catch (error) {
-        console.log('error fetching recipient data', error);
-      }
-    };
-
-    fetchRecipientData();
   }, []);
 
   const handleSend = async () => {
@@ -163,6 +149,30 @@ const ChatMessagesScreen = () => {
     );
   };
 
+  useEffect(() => {
+    const fetchRecipientsData = async () => {
+      try {
+        const response = await API.get(`/chats/conversation/${conversationId}`);
+        if (response.status === 200) {
+          let recipientsData;
+          if (response.data.participants.length > 2) {
+            recipientsData = response.data.participants; // Don't filter out the user if it's a group chat
+          } else {
+            recipientsData = response.data.participants.filter(
+              participant => participant._id !== userId,
+            );
+          }
+          setRecipientsData(recipientsData);
+          setGroupName(response.data.name);
+        }
+      } catch (error) {
+        console.log('error fetching recipient data', error);
+      }
+    };
+
+    fetchRecipientsData();
+  }, []);
+
   useLayoutEffect(() => {
     navigation.setOptions({
       headerTitle: '',
@@ -176,31 +186,38 @@ const ChatMessagesScreen = () => {
           />
 
           <View style={{flexDirection: 'row', alignItems: 'center'}}>
-            {recipientData && recipientData.image && (
+            {recipientsData.map((recipient, index) => (
               <Image
+                key={index}
                 style={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: 15,
+                  width: recipientsData.length > 1 ? 17 : 30,
+                  height: recipientsData.length > 1 ? 17 : 30,
+                  borderRadius: recipientsData.length > 1 ? 5 : 15,
                   resizeMode: 'cover',
+                  left: index * 5,
                 }}
-                source={{uri: recipientData.image}}
+                source={{uri: recipient.image}}
               />
-            )}
-            <Text style={{marginLeft: 5, fontSize: 15, fontWeight: 'bold'}}>
-              {recipientData?.name}
+            ))}
+            <Text
+              style={{
+                marginLeft: recipientsData.length > 1 ? 15 : 5,
+                fontSize: 15,
+                fontWeight: 'bold',
+              }}>
+              {groupName ? groupName : recipientsData[0]?.name}
             </Text>
           </View>
         </View>
       ),
     });
-  }, [recipientData]);
+  }, [recipientsData, groupName]);
 
   // deletes all messages in the conversation for both users, used to clean database up for testing
 
   const deleteMessages = async () => {
     try {
-      const response = await API.delete(`/messages/${conversationId}`);
+      const response = await API.delete(`/chats/messages/${conversationId}`);
       if (response.status === 200) {
         console.log(response.data.message);
         setMessages([]);
@@ -211,7 +228,9 @@ const ChatMessagesScreen = () => {
   };
 
   return (
-    <KeyboardAvoidingView style={{flex: 1, backgroundColor: '#f0f0f0'}}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{flex: 1, backgroundColor: '#f0f0f0'}}>
       <ScrollView
         ref={scrollViewRef}
         contentContainerStyle={{flexGrow: 1}}

@@ -38,12 +38,12 @@ router.post("/register", async (req, res) => {
   try {
     await newUser.save();
     const accessToken = createToken(
-      user._id,
+      newUser._id,
       process.env.ACCESS_TOKEN_SECRET,
       "15m"
     );
     const refreshToken = createToken(
-      user._id,
+      newUser._id,
       process.env.REFRESH_TOKEN_SECRET,
       "7d"
     );
@@ -104,7 +104,7 @@ router.post("/login", async (req, res) => {
     });
 });
 
-// Endpoint to log out //! NOT TESTED
+// Endpoint to log out
 
 router.post("/logout", authenticateJWT, (req, res) => {
   const userId = req.user.userId;
@@ -117,7 +117,7 @@ router.post("/logout", authenticateJWT, (req, res) => {
   res.sendStatus(204);
 });
 
-// Endpoint to update user details //! NOT TESTED
+// Endpoint to update user details //! not used in front end yet
 
 router.put("/update/:userId", authenticateJWT, async (req, res) => {
   const userId = req.params.userId;
@@ -150,7 +150,7 @@ router.put("/update/:userId", authenticateJWT, async (req, res) => {
   }
 });
 
-// Endpoint to delete your account //! NOT TESTED
+// Endpoint to delete your account //! not used in front end yet
 
 router.delete("/delete/:userId", authenticateJWT, async (req, res) => {
   const userId = req.params.userId;

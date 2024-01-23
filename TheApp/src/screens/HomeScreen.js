@@ -1,4 +1,4 @@
-import {StyleSheet, Text, View} from 'react-native';
+import {StyleSheet, Text, View, ScrollView} from 'react-native';
 import React, {useLayoutEffect, useContext, useEffect} from 'react';
 import {useNavigation} from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -15,8 +15,16 @@ const HomeScreen = () => {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerTitle: '',
       headerLeft: () => (
+        <MaterialIcons
+          onPress={() => navigation.navigate('Profile')}
+          name="person-outline"
+          size={24}
+          color="black"
+          style={{marginLeft: 10}}
+        />
+      ),
+      headerTitle: () => (
         <Text style={{fontSize: 16, fontWeight: 'bold'}}>Igloo Chat</Text>
       ),
       headerRight: () => (
@@ -58,14 +66,15 @@ const HomeScreen = () => {
     fetchUsers();
   }, []);
 
-  // console.log('users', users); // for debugging purposes
   return (
     <View>
-      <View style={{padding: 10}}>
-        {users.map((item, index) => (
-          <User key={index} item={item} />
-        ))}
-      </View>
+      <ScrollView>
+        <View style={{padding: 10}}>
+          {users.map((item, index) => (
+            <User key={index} item={item} />
+          ))}
+        </View>
+      </ScrollView>
     </View>
   );
 };

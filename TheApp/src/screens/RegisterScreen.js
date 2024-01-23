@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Text,
   View,
+  Image,
 } from 'react-native';
 import React, {useState} from 'react';
 import {
@@ -15,7 +16,8 @@ import {
 } from 'react-native-gesture-handler';
 import {useNavigation} from '@react-navigation/native';
 import axios from 'axios';
-
+import Toast from 'react-native-toast-message';
+// import * as ImagePicker from 'react-native-image-picker';
 const RegisterScreen = () => {
   const [email, setEmail] = React.useState('');
   const [name, setName] = React.useState('');
@@ -23,32 +25,68 @@ const RegisterScreen = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [image, setImage] = useState('');
   const navigation = useNavigation();
+
+  // S3 bucket needed for ImagePicker
+
+  // const pickImage = () => {
+  //   const options = {
+  //     noData: true,
+  //   };
+
+  //   ImagePicker.launchImageLibrary(options, response => {
+  //     if (response.uri) {
+  //       setImage(response.uri);
+  //     }
+  //   });
+  // };
+
   const handleRegister = async () => {
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match!');
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Passwords do not match!',
+      });
       return;
     }
+
+    let validImage = image;
+
+    // Verify the image URL
+    try {
+      const response = await axios.get(image);
+      if (response.status !== 200) {
+        throw new Error('Invalid image URL');
+      }
+    } catch (error) {
+      // Set the default image URL
+      validImage =
+        'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png';
+    }
+
     const user = {
       name: name,
       email: email,
       password: password,
-      image: image,
+      image: validImage,
     };
+
     // send a POST request to the backend API to register the user
     try {
       const URL = `${baseURL}/users/register`;
       const response = await axios.post(URL, user);
-      console.log(response);
       Alert.alert('Success', 'You have successfully registered!');
       setName('');
       setEmail('');
       setPassword('');
       setImage('');
+      navigation.replace('Login');
     } catch (error) {
       Alert.alert('Error', error.message);
       console.log('registration failed', error);
     }
   };
+
   return (
     <GestureHandlerRootView style={{flex: 1}}>
       <ScrollView>
@@ -180,9 +218,21 @@ const RegisterScreen = () => {
                     width: 300,
                   }}
                   placeholderTextColor={'black'}
-                  placeholder="enter your image"
+                  placeholder="enter your image address"
                 />
               </View>
+
+              {/* <Pressable onPress={pickImage} style={{marginTop: 10}}>
+                <Text style={{fontSize: 18, fontWeight: '600', color: 'grey'}}>
+                  Image
+                </Text>
+                {image !== '' && (
+                  <Image
+                    source={{uri: image}}
+                    style={{width: 100, height: 100}}
+                  />
+                )}
+              </Pressable> */}
 
               <Pressable
                 onPress={handleRegister}

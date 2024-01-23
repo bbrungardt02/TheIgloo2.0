@@ -2,10 +2,13 @@ import {StyleSheet, Text, View, Pressable, Image} from 'react-native';
 import React, {useContext} from 'react';
 import {UserType} from '../../UserContext';
 import API from '../config/API';
+import Toast from 'react-native-toast-message';
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 const User = ({item}) => {
   const {userId, setUserId} = useContext(UserType);
   const [requestSent, setRequestSent] = React.useState(false);
+
   const sendFriendRequest = async (currentUserId, selectedUserId) => {
     try {
       const response = await API.post(`/friends/request`, {
@@ -14,9 +17,21 @@ const User = ({item}) => {
       });
       if (response.status === 200) {
         setRequestSent(true);
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'Friend request sent!',
+        });
+      } else {
+        throw new Error('Failed to send friend request');
       }
     } catch (error) {
       console.log('error sending request', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to send friend request',
+      });
     }
   };
 
@@ -42,10 +57,16 @@ const User = ({item}) => {
           padding: 10,
           borderRadius: 6,
           width: 105,
+          justifyContent: 'center',
+          alignItems: 'center',
         }}>
-        <Text style={{textAlign: 'center', color: 'white', fontSize: 13}}>
-          Add Friend
-        </Text>
+        {requestSent ? (
+          <Icon name="check" size={24} color="white" />
+        ) : (
+          <Text style={{textAlign: 'center', color: 'white', fontSize: 13}}>
+            Add Friend
+          </Text>
+        )}
       </Pressable>
     </Pressable>
   );

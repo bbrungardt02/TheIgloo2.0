@@ -123,34 +123,36 @@ router.get(
   }
 );
 
-// Configure multer for handling file uploads //! TO DO
+// S3 Bucket needed for this feature
 
-const path = require("path");
-const multer = require("multer");
-const mime = require("mime-types");
+// // Configure multer for handling file uploads //! not used in front end yet
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "public");
-  },
-  filename: function (req, file, cb) {
-    const name = req.params.id;
-    cb(null, name + (path.extname(file.originalname) || ".png"));
-  },
-});
+// const path = require("path");
+// const multer = require("multer");
+// const mime = require("mime-types");
 
-const upload = multer({ storage });
+// const storage = multer.diskStorage({
+//   destination: function (req, file, cb) {
+//     cb(null, "public");
+//   },
+//   filename: function (req, file, cb) {
+//     const name = req.params.id;
+//     cb(null, name + (path.extname(file.originalname) || ".png"));
+//   },
+// });
 
-function getRandomString(length = 20) {
-  const randomChars =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let result = "";
-  for (let i = 0; i < length; i++)
-    result += randomChars.charAt(
-      Math.floor(Math.random() * randomChars.length)
-    );
-  return result;
-}
+// const upload = multer({ storage });
+
+// function getRandomString(length = 20) {
+//   const randomChars =
+//     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+//   let result = "";
+//   for (let i = 0; i < length; i++)
+//     result += randomChars.charAt(
+//       Math.floor(Math.random() * randomChars.length)
+//     );
+//   return result;
+// }
 
 // endpoint to fetch the messages of the conversation
 
@@ -181,7 +183,7 @@ router.get("/messages/:conversationId", authenticateJWT, async (req, res) => {
   }
 });
 
-// Endpoint to delete a particular message from a conversation //! NOT TESTED
+// Endpoint to delete a particular message from a conversation //! not used in front end yet
 
 router.delete(
   "/conversations/:conversationId/messages/:messageId",

@@ -8,8 +8,8 @@ import Toast from 'react-native-toast-message';
 function App() {
   return (
     <>
-      <StatusBar barStyle="dark-content" />
-      <View style={styles.sectionContainer}></View>
+      {/* <StatusBar barStyle="dark-content" /> */}
+      {/* <View style={styles.sectionContainer}></View> */}
       {/* <View
         style={{
           flex: 1,

@@ -7,17 +7,15 @@ import {
   TextInput,
   Pressable,
   Image,
+  SafeAreaView,
 } from 'react-native';
 import React, {useContext, useEffect, useLayoutEffect, useRef} from 'react';
 import {UserType} from '../../UserContext';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import Entypo from 'react-native-vector-icons/Entypo';
+// import Entypo from 'react-native-vector-icons/Entypo';
 import IonIcons from 'react-native-vector-icons/Ionicons';
-import EmojiSelector from 'react-native-emoji-selector';
 import {useRoute} from '@react-navigation/native';
 import {useNavigation} from '@react-navigation/native';
-import * as ImagePicker from 'react-native-image-picker';
+// import * as ImagePicker from 'react-native-image-picker';
 import {
   joinConversation,
   sendMessage,
@@ -38,11 +36,6 @@ const ChatMessagesScreen = () => {
   const [recipientsData, setRecipientsData] = React.useState([]);
   const isJoined = React.useRef(false);
   const [groupName, setGroupName] = React.useState('');
-
-  const [showEmojiSelector, setShowEmojiSelector] = React.useState(false);
-  const handleEmojiPress = () => {
-    setShowEmojiSelector(!showEmojiSelector);
-  };
 
   const scrollViewRef = useRef(null);
 
@@ -126,28 +119,30 @@ const ChatMessagesScreen = () => {
     return new Date(time).toLocaleString([], options);
   };
 
-  const pickImage = () => {
-    ImagePicker.launchImageLibrary(
-      {
-        mediaType: 'photo',
-        includeBase64: false,
-        maxHeight: 200,
-        maxWidth: 200,
-      },
-      response => {
-        console.log(response);
-        if (response.didCancel) {
-          console.log('User cancelled image picker');
-        } else if (response.error) {
-          console.log('ImagePicker Error: ', response.error);
-        } else {
-          const source = {uri: response.assets[0].uri};
-          console.log(source);
-          setSelectedImage(response.assets[0].uri); // only set the selected image URI to state
-        }
-      },
-    );
-  };
+  // S3 bucket needed for ImagePicker
+
+  // const pickImage = () => {
+  //   ImagePicker.launchImageLibrary(
+  //     {
+  //       mediaType: 'photo',
+  //       includeBase64: false,
+  //       maxHeight: 200,
+  //       maxWidth: 200,
+  //     },
+  //     response => {
+  //       console.log(response);
+  //       if (response.didCancel) {
+  //         console.log('User cancelled image picker');
+  //       } else if (response.error) {
+  //         console.log('ImagePicker Error: ', response.error);
+  //       } else {
+  //         const source = {uri: response.assets[0].uri};
+  //         console.log(source);
+  //         setSelectedImage(response.assets[0].uri); // only set the selected image URI to state
+  //       }
+  //     },
+  //   );
+  // };
 
   useEffect(() => {
     const fetchRecipientsData = async () => {
@@ -213,31 +208,15 @@ const ChatMessagesScreen = () => {
     });
   }, [recipientsData, groupName]);
 
-  // deletes all messages in the conversation for both users, used to clean database up for testing
-
-  const deleteMessages = async () => {
-    try {
-      const response = await API.delete(`/chats/messages/${conversationId}`);
-      if (response.status === 200) {
-        console.log(response.data.message);
-        setMessages([]);
-      }
-    } catch (error) {
-      console.error('Error deleting messages', error);
-    }
-  };
-
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={{flex: 1, backgroundColor: '#f0f0f0'}}>
+      keyboardVerticalOffset={90}
+      style={{flex: 1}}>
       <ScrollView
         ref={scrollViewRef}
         contentContainerStyle={{flexGrow: 1}}
         onContentSizeChange={scrollToBottom}>
-        <Pressable onPress={deleteMessages}>
-          <Text>Delete All Messages</Text>
-        </Pressable>
         {messages.map((item, index) => {
           if (item.text) {
             return (
@@ -266,7 +245,7 @@ const ChatMessagesScreen = () => {
                   {item?.text}
                 </Text>
                 <Text style={{fontSize: 10, color: 'gray'}}>
-                  Sent by: {item?.userId?._id}
+                  Sent by: {item?.userId?.name}
                 </Text>
                 <Text
                   style={{
@@ -346,74 +325,58 @@ const ChatMessagesScreen = () => {
         </View>
       ) : null}
 
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          paddingHorizontal: 10,
-          paddingVertical: 10,
-          borderTopWidth: 1,
-          borderTopColor: 'dddddd',
-          marginBottom: showEmojiSelector ? 0 : 25,
-        }}>
-        <MaterialIcons
-          onPress={handleEmojiPress}
-          style={{marginRight: 5}}
-          name="emoji-emotions"
-          size={24}
-          color="gray"
-        />
-        <TextInput
-          value={message}
-          onChangeText={text => setMessage(text)}
-          style={{
-            flex: 1,
-            height: 40,
-            borderWidth: 1,
-            borderColor: '#dddddd',
-            borderRadius: 20,
-            paddingHorizontal: 10,
-          }}
-          placeholder="Igloo Message"
-        />
+      <SafeAreaView>
         <View
           style={{
             flexDirection: 'row',
             alignItems: 'center',
-            gap: 7,
-            marginHorizontal: 8,
+            paddingHorizontal: 10,
+            paddingVertical: 10,
+            borderTopWidth: 0.25,
+            borderTopColor: 'F8F8F8',
           }}>
-          <FontAwesome
+          <TextInput
+            value={message}
+            onChangeText={text => setMessage(text)}
+            style={{
+              flex: 1,
+              height: 40,
+              borderWidth: 1,
+              borderColor: '#dddddd',
+              borderRadius: 20,
+              paddingHorizontal: 10,
+            }}
+            placeholder="Igloo Message"
+          />
+
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 7,
+              marginHorizontal: 8,
+            }}>
+            {/* <FontAwesome
             onPress={pickImage}
             name="camera"
             size={24}
             color="gray"
-          />
-          <Entypo name="mic" size={24} color="gray" />
+          /> */}
+            {/* <Entypo name="mic" size={24} color="gray" /> */}
+          </View>
+
+          <Pressable
+            onPress={() => handleSend()}
+            style={{
+              backgroundColor: '#007bff',
+              paddingVertical: 8,
+              paddingHorizontal: 12,
+              borderRadius: 20,
+            }}>
+            <Text style={{color: 'white', fontWeight: 'bold'}}>Send</Text>
+          </Pressable>
         </View>
-
-        <Pressable
-          onPress={() => handleSend()}
-          style={{
-            backgroundColor: '#007bff',
-            paddingVertical: 8,
-            paddingHorizontal: 12,
-            borderRadius: 20,
-          }}>
-          <Text style={{color: 'white', fontWeight: 'bold'}}>Send</Text>
-        </Pressable>
-      </View>
-
-      {showEmojiSelector && (
-        <EmojiSelector
-          onEmojiSelected={emoji => {
-            setMessage(prevMessage => prevMessage + emoji);
-          }}
-          style={{
-            height: 250,
-          }}
-        />
-      )}
+      </SafeAreaView>
     </KeyboardAvoidingView>
   );
 };

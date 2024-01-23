@@ -3,10 +3,12 @@ import React, {useContext} from 'react';
 import {UserType} from '../../UserContext';
 import {useNavigation} from '@react-navigation/native';
 import API from '../config/API';
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 const FriendRequests = ({item, friendRequests, setFriendRequests}) => {
   const {userId, setUserId} = useContext(UserType);
   const navigation = useNavigation();
+
   const acceptRequest = async friendRequestId => {
     try {
       const response = await API.post(`/friends/accept`, {
@@ -16,13 +18,30 @@ const FriendRequests = ({item, friendRequests, setFriendRequests}) => {
       if (response.status === 200) {
         setFriendRequests(
           friendRequests.filter(response => response._id !== friendRequestId),
-          navigation.navigate('Chats'),
+          navigation.replace('Chats'),
         );
       }
     } catch (error) {
       console.log('error accepting request', error);
     }
   };
+
+  const rejectRequest = async friendRequestId => {
+    try {
+      const response = await API.post(`/friends/reject`, {
+        senderId: friendRequestId,
+        recipientId: userId,
+      });
+      if (response.status === 200) {
+        setFriendRequests(
+          friendRequests.filter(response => response._id !== friendRequestId),
+        );
+      }
+    } catch (error) {
+      console.log('error rejecting request', error);
+    }
+  };
+
   return (
     <Pressable
       style={{
@@ -40,11 +59,24 @@ const FriendRequests = ({item, friendRequests, setFriendRequests}) => {
         {item?.name} sent a friend request!
       </Text>
 
-      <Pressable
-        onPress={() => acceptRequest(item._id)}
-        style={{backgroundColor: '#007BFF', padding: 10, borderRadius: 6}}>
-        <Text style={{textAlign: 'center', color: 'white'}}>Accept</Text>
-      </Pressable>
+      <View style={{flexDirection: 'row'}}>
+        <Pressable
+          onPress={() => rejectRequest(item._id)}
+          style={{
+            backgroundColor: '#FF0000',
+            padding: 10,
+            borderRadius: 6,
+            marginRight: 10,
+          }}>
+          <Icon name="times" size={24} color="white" />
+        </Pressable>
+
+        <Pressable
+          onPress={() => acceptRequest(item._id)}
+          style={{backgroundColor: '#007BFF', padding: 10, borderRadius: 6}}>
+          <Icon name="check" size={24} color="white" />
+        </Pressable>
+      </View>
     </Pressable>
   );
 };

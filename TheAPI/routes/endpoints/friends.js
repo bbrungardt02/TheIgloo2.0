@@ -9,6 +9,14 @@ router.post("/request", authenticateJWT, async (req, res) => {
   const { currentUserId, selectedUserId } = req.body;
 
   try {
+    // get the recipient's data
+    const recipient = await User.findById(selectedUserId);
+
+    // check if a friend request from the current user already exists
+    if (recipient.friendRequests.includes(currentUserId)) {
+      return res.status(400).json({ message: "Friend request already sent!" });
+    }
+
     // update the recipient's friendRequests array
     await User.findByIdAndUpdate(
       selectedUserId,
@@ -19,6 +27,7 @@ router.post("/request", authenticateJWT, async (req, res) => {
       },
       { new: true }
     );
+
     // update the sender's sentFriendRequests array
     await User.findByIdAndUpdate(
       currentUserId,
@@ -111,9 +120,9 @@ router.post("/accept", authenticateJWT, async (req, res) => {
   }
 });
 
-// endpoint to reject a friend request //! NOT TESTED
+// endpoint to reject a friend request //! not used in front end yet
 
-router.post("/friend-request/reject", authenticateJWT, async (req, res) => {
+router.post("/reject", authenticateJWT, async (req, res) => {
   try {
     const { senderId, recipientId } = req.body;
 
